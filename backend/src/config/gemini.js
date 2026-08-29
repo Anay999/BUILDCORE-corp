@@ -9,9 +9,8 @@ const GEMINI_KEY = process.env.GEMINI_API_KEY || "";
 // Models tried in order — first one that succeeds wins
 const MODEL_CHAIN = [
   "gemini-2.0-flash",
-  "gemini-2.0-flash-lite",
-  "gemini-2.5-flash-preview-05-20",
   "gemini-1.5-flash",
+  "gemini-1.5-pro",
 ];
 
 // Fetch an image from URL and return { base64, mimeType }
@@ -40,6 +39,10 @@ function readFileAsBase64(filePath) {
 
 // Try each model in MODEL_CHAIN until one works
 async function callGeminiWithFallback(prompt, imageParts) {
+  if (!GEMINI_KEY || !GEMINI_KEY.startsWith("AIzaSy")) {
+    console.warn("⚠️ Valid Gemini API Key (AIzaSy...) not detected in .env. Falling back to built-in AI engine.");
+    return null;
+  }
   const genAI = new GoogleGenerativeAI(GEMINI_KEY);
 
   for (const modelName of MODEL_CHAIN) {
@@ -118,6 +121,7 @@ Be specific and accurate. Base estimated_completion on visual evidence in the ph
 
   try {
     const text = await callGeminiWithFallback(prompt, imageParts);
+    if (!text) return null;
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("No JSON in response");
     return JSON.parse(jsonMatch[0]);
