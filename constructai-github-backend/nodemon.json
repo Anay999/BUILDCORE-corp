@@ -1,0 +1,7 @@
+{
+  "ignore": [
+    "src/config/mockDb_persistent.json",
+    "mockDb_persistent.json",
+    "*.json"
+  ]
+}

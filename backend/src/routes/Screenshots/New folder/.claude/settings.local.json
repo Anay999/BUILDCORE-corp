@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__visualize__show_widget",
+      "Bash(start \"\" \"C:\\\\Users\\\\anayp\\\\OneDrive\\\\Pictures\\\\Screenshots\\\\New folder\\\\prototype.html\")",
+      "Bash(git --version)",
+      "Bash(gh --version)"
+    ]
+  }
+}

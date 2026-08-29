@@ -1,0 +1,1918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FoodRush — Interactive Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:#0f0f13;color:#fff;min-height:100vh;overflow-x:hidden}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:#18181f;border-bottom:1px solid #2a2a35;position:sticky;top:0;z-index:100}
+.topbar-logo{display:flex;align-items:center;gap:10px}
+.topbar-logo .icon{width:32px;height:32px;background:linear-gradient(135deg,#ff6b35,#f7c59f);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.topbar-logo span{font-weight:800;font-size:18px;background:linear-gradient(135deg,#ff6b35,#f7c59f);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.topbar-meta{display:flex;align-items:center;gap:8px}
+.badge{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.badge.green{background:#0d3d2e;color:#34d399;border:1px solid #34d39940}
+.badge.orange{background:#3d1f0d;color:#fb923c;border:1px solid #fb923c40}
+.badge.blue{background:#0d1f3d;color:#60a5fa;border:1px solid #60a5fa40}
+.topbar-actions{display:flex;gap:8px}
+.btn-sm{padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;border:none;cursor:pointer;transition:all .2s}
+.btn-reset{background:#2a2a35;color:#a0a0b0}
+.btn-reset:hover{background:#3a3a48}
+.btn-export{background:linear-gradient(135deg,#ff6b35,#e85d26);color:#fff}
+.btn-export:hover{opacity:.9;transform:translateY(-1px)}
+.shell{display:flex;height:calc(100vh - 57px)}
+.lsb{width:240px;background:#18181f;border-right:1px solid #2a2a35;padding:20px 16px;overflow-y:auto;flex-shrink:0}
+.lsb h3{font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px}
+.flow-step{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;cursor:pointer;transition:all .2s;margin-bottom:4px;border:1px solid transparent}
+.flow-step:hover{background:#22222e}
+.flow-step.active{background:#1e1a2e;border-color:#7c3aed40}
+.flow-step .dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.flow-step .dot.done{background:#0d3d2e;color:#34d399}
+.flow-step .dot.act{background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff}
+.flow-step .dot.idle{background:#2a2a35;color:#666}
+.flow-step .label{font-size:13px;color:#ccc}
+.flow-step.active .label{color:#fff;font-weight:600}
+.divider{height:1px;background:#2a2a35;margin:16px 0}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.stat-card{background:#22222e;border-radius:10px;padding:12px;text-align:center}
+.stat-card .val{font-size:22px;font-weight:800;background:linear-gradient(135deg,#ff6b35,#f7c59f);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.stat-card .lbl{font-size:10px;color:#666;margin-top:2px}
+.center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;overflow:hidden;background:#0f0f13}
+.device-wrap{position:relative}
+.device{width:320px;height:660px;background:#111;border-radius:44px;border:8px solid #333;box-shadow:0 0 0 1px #444,0 40px 80px rgba(0,0,0,.8),inset 0 0 0 2px #222;position:relative;overflow:hidden}
+.notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:100px;height:26px;background:#111;border-radius:0 0 16px 16px;z-index:50}
+.screen{position:absolute;inset:0;overflow:hidden;opacity:0;pointer-events:none;transition:opacity .3s ease,transform .3s ease;transform:translateX(20px)}
+.screen.active{opacity:1;pointer-events:all;transform:translateX(0)}
+.device-ctrl{margin-top:16px;display:flex;align-items:center;gap:12px;justify-content:center}
+.ctrl-btn{padding:8px 16px;background:#22222e;border:1px solid #2a2a35;border-radius:8px;color:#aaa;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+.ctrl-btn:hover{background:#2a2a35;color:#fff}
+.rpanel{width:260px;background:#18181f;border-left:1px solid #2a2a35;padding:20px 16px;overflow-y:auto;flex-shrink:0}
+.rpanel h3{font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px}
+.test-row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#22222e;border-radius:10px;margin-bottom:8px;cursor:pointer;transition:all .2s}
+.test-row:hover{background:#2a2a35}
+.test-row .test-name{font-size:13px;color:#ccc}
+.test-row .test-status{font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px}
+.test-row .test-status.pass{background:#0d3d2e;color:#34d399}
+.test-row .test-status.fail{background:#3d0d0d;color:#f87171}
+.test-row .test-status.skip{background:#2a2a35;color:#888}
+.stars{display:flex;gap:4px;margin:8px 0}
+.star{font-size:22px;cursor:pointer;color:#333;transition:color .15s}
+.star.lit{color:#fbbf24}
+.fb-ta{width:100%;background:#22222e;border:1px solid #2a2a35;border-radius:10px;color:#fff;padding:10px;font-size:13px;font-family:inherit;resize:none;outline:none;margin-bottom:8px}
+.fb-ta:focus{border-color:#7c3aed60}
+.btn-full{width:100%;padding:10px;border-radius:10px;border:none;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s}
+.btn-submit{background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff}
+.btn-submit:hover{opacity:.9}
+.fb-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.fb-tag{padding:5px 10px;background:#22222e;border:1px solid #2a2a35;border-radius:20px;font-size:11px;color:#aaa;cursor:pointer;transition:all .2s}
+.fb-tag:hover,.fb-tag.sel{background:#1e1a2e;border-color:#7c3aed;color:#a78bfa}
+.analytics-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #22222e}
+.analytics-row:last-child{border:none}
+.analytics-row .albl{font-size:12px;color:#888}
+.analytics-row .aval{font-size:13px;font-weight:700;color:#fff}
+
+/* PHONE SCREENS */
+#sc-splash{background:linear-gradient(160deg,#1a0f2e 0%,#0f0f1a 60%,#1a0a0a 100%)}
+.splash-inner{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 28px;text-align:center}
+.splash-logo{width:72px;height:72px;background:linear-gradient(135deg,#ff6b35,#f7c59f);border-radius:24px;display:flex;align-items:center;justify-content:center;font-size:38px;margin-bottom:20px;box-shadow:0 16px 40px rgba(255,107,53,.4)}
+.splash-title{font-size:30px;font-weight:900;line-height:1.1;margin-bottom:8px}
+.splash-title span{background:linear-gradient(135deg,#ff6b35,#f7c59f);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.splash-sub{font-size:14px;color:#888;margin-bottom:36px;line-height:1.5}
+.btn-pill{display:block;width:100%;padding:15px;border-radius:16px;border:none;font-size:16px;font-weight:700;cursor:pointer;transition:all .2s;text-align:center}
+.btn-primary{background:linear-gradient(135deg,#ff6b35,#e85d26);color:#fff;box-shadow:0 8px 24px rgba(255,107,53,.35)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(255,107,53,.5)}
+.btn-secondary{background:#22222e;color:#fff;border:1px solid #2a2a35;margin-top:10px}
+.btn-link{background:none;border:none;color:#ff6b35;font-size:13px;font-weight:600;cursor:pointer;margin-top:16px;display:block;text-align:center}
+#sc-signin,#sc-signup,#sc-verify{background:#0f0f1a}
+.auth-inner{height:100%;overflow-y:auto;padding:50px 24px 28px}
+.back-btn{position:absolute;top:36px;left:16px;width:36px;height:36px;background:#22222e;border:none;border-radius:12px;color:#fff;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:20;transition:all .2s;line-height:1}
+.back-btn:hover{background:#2a2a35;transform:scale(1.06)}
+.auth-head{margin-bottom:28px;margin-top:8px}
+.auth-head h2{font-size:26px;font-weight:800;margin-bottom:6px}
+.auth-head p{font-size:14px;color:#888}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:12px;font-weight:600;color:#888;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.form-input{width:100%;padding:13px 14px;background:#22222e;border:1.5px solid #2a2a35;border-radius:12px;color:#fff;font-size:14px;font-family:inherit;outline:none;transition:border-color .2s}
+.form-input:focus{border-color:#ff6b3580}
+.form-input::placeholder{color:#555}
+.err-msg{font-size:12px;color:#f87171;margin-top:5px;display:none}
+.auth-switch{text-align:center;margin-top:16px;font-size:13px;color:#888}
+.auth-switch button{background:none;border:none;color:#ff6b35;font-weight:700;cursor:pointer;font-size:13px}
+.verify-inner{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;text-align:center}
+.verify-icon{width:80px;height:80px;background:linear-gradient(135deg,#1e3a8a,#3b82f6);border-radius:28px;display:flex;align-items:center;justify-content:center;font-size:40px;margin-bottom:20px;box-shadow:0 16px 40px rgba(59,130,246,.3)}
+.verify-inner h2{font-size:22px;font-weight:800;margin-bottom:8px}
+.verify-inner p{font-size:13px;color:#888;line-height:1.6;margin-bottom:24px}
+.verify-email{font-size:14px;font-weight:700;color:#60a5fa;margin-bottom:8px}
+#sc-home{background:#0f0f1a}
+.phone-sb{overflow-y:auto;height:100%;padding-bottom:70px;scrollbar-width:none}
+.phone-sb::-webkit-scrollbar{display:none}
+.phone-header{display:flex;align-items:center;justify-content:space-between;padding:42px 16px 12px}
+.phone-header .left h1{font-size:20px;font-weight:800}
+.phone-header .left p{font-size:12px;color:#888;margin-top:2px}
+.phone-header .avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#ff6b35,#f7c59f);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer}
+.search-bar{margin:0 14px 16px;display:flex;align-items:center;gap:8px;background:#1e1e2a;border:1.5px solid #2a2a35;border-radius:14px;padding:10px 14px;cursor:pointer;transition:border-color .2s}
+.search-bar:hover{border-color:#3a3a48}
+.search-bar .s-icon{font-size:16px;color:#666}
+.search-bar span{font-size:14px;color:#555}
+.section-head{display:flex;align-items:center;justify-content:space-between;padding:4px 16px 10px}
+.section-head h2{font-size:16px;font-weight:700}
+.section-head button{font-size:12px;color:#ff6b35;font-weight:600;cursor:pointer;background:none;border:none}
+.cats{display:flex;gap:10px;padding:0 14px 16px;overflow-x:auto;scrollbar-width:none}
+.cats::-webkit-scrollbar{display:none}
+.cat-chip{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;cursor:pointer}
+.cat-chip .cat-icon{width:52px;height:52px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:24px;transition:transform .2s}
+.cat-chip:hover .cat-icon{transform:scale(1.08)}
+.cat-chip span{font-size:10px;color:#aaa;font-weight:600}
+.banners{display:flex;gap:10px;padding:0 14px 16px;overflow-x:auto;scrollbar-width:none}
+.banners::-webkit-scrollbar{display:none}
+.banner-card{flex-shrink:0;width:220px;height:100px;border-radius:16px;overflow:hidden;position:relative;cursor:pointer}
+.banner-card img{width:100%;height:100%;object-fit:cover}
+.banner-card .btext{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.7),transparent);padding:14px}
+.banner-card .btext h4{font-size:13px;font-weight:800}
+.banner-card .btext p{font-size:10px;color:#f7c59f}
+.rest-cards{padding:0 14px;display:flex;flex-direction:column;gap:14px}
+.rest-card{background:#1a1a24;border-radius:18px;overflow:hidden;cursor:pointer;transition:transform .2s,box-shadow .2s;border:1px solid #2a2a35}
+.rest-card:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(0,0,0,.5)}
+.rest-img{width:100%;height:150px;object-fit:cover;display:block}
+.rest-info{padding:12px 14px}
+.rest-info h3{font-size:15px;font-weight:700;margin-bottom:3px}
+.rest-info .cuisine{font-size:12px;color:#888;margin-bottom:8px}
+.rest-meta{display:flex;align-items:center;gap:10px}
+.meta-chip{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600}
+.meta-chip.rating{background:#1b3a2e;color:#34d399;padding:3px 7px;border-radius:6px}
+.meta-dot{color:#555}
+.meta-text{font-size:11px;color:#888}
+.offer-tag{display:inline-flex;align-items:center;gap:4px;background:#1a1f2e;border:1px solid #3b4b6e;color:#60a5fa;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;margin-top:8px}
+#sc-restaurant{background:#0f0f1a}
+.rest-hero{width:100%;height:180px;object-fit:cover;display:block}
+.rest-hero-overlay{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.88));padding:16px}
+.rest-hero-overlay h2{font-size:18px;font-weight:800}
+.rest-hero-overlay p{font-size:12px;color:#aaa;margin-top:2px}
+.rest-hero-meta{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.rest-hero-meta .chip{display:flex;align-items:center;gap:4px;background:rgba(255,255,255,.12);backdrop-filter:blur(8px);border-radius:8px;padding:4px 8px;font-size:11px;font-weight:600}
+.menu-section{padding:0 14px}
+.menu-cat-label{font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:1px;padding:14px 0 8px;border-top:1px solid #1e1e2a;margin-top:8px}
+.menu-cat-label:first-child{border-top:none;margin-top:0}
+.dish-row{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #1a1a24;cursor:pointer;transition:background .15s;border-radius:12px}
+.dish-row:last-child{border-bottom:none}
+.dish-img{width:88px;height:70px;border-radius:12px;object-fit:cover;flex-shrink:0}
+.dish-text{flex:1;min-width:0}
+.dish-text h4{font-size:14px;font-weight:600;margin-bottom:3px}
+.dish-text p{font-size:11px;color:#777;line-height:1.4;margin-bottom:5px}
+.dish-text .price{font-size:14px;font-weight:700}
+.dish-tags{display:flex;gap:5px;margin-bottom:5px}
+.tag-veg{font-size:10px;background:#0d3d1a;color:#4ade80;padding:2px 6px;border-radius:4px;font-weight:600}
+.tag-best{font-size:10px;background:#2d1f0a;color:#fbbf24;padding:2px 6px;border-radius:4px;font-weight:600}
+.tag-new{font-size:10px;background:#1a1f3d;color:#818cf8;padding:2px 6px;border-radius:4px;font-weight:600}
+.add-btn{align-self:flex-end;padding:6px 14px;background:linear-gradient(135deg,#ff6b35,#e85d26);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:transform .15s}
+.add-btn:hover{transform:scale(1.06)}
+#sc-cart{background:#0f0f1a}
+.cart-inner{height:100%;overflow-y:auto;padding-bottom:70px;scrollbar-width:none}
+.cart-inner::-webkit-scrollbar{display:none}
+.cart-header{padding:42px 16px 14px;display:flex;align-items:center;gap:10px}
+.cart-header h2{font-size:20px;font-weight:800}
+.cart-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:70%;text-align:center;padding:28px}
+.cart-empty .empty-icon{font-size:56px;margin-bottom:16px}
+.cart-empty h3{font-size:18px;font-weight:700;margin-bottom:6px}
+.cart-empty p{font-size:13px;color:#888}
+.cart-items{padding:0 14px}
+.cart-item{display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid #1e1e2a}
+.cart-item-img{width:60px;height:55px;border-radius:10px;object-fit:cover;flex-shrink:0}
+.cart-item-info{flex:1;min-width:0}
+.cart-item-info h4{font-size:14px;font-weight:600;margin-bottom:2px}
+.cart-item-info .item-rest{font-size:11px;color:#888}
+.cart-item-price{font-size:14px;font-weight:700;text-align:right}
+.qty-ctrl{display:flex;align-items:center;gap:8px;margin-top:6px}
+.qty-btn{width:26px;height:26px;border-radius:8px;background:#2a2a35;border:none;color:#fff;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.qty-btn:hover{background:#ff6b35}
+.qty-num{font-size:14px;font-weight:700;min-width:20px;text-align:center}
+.price-breakdown{margin:16px 14px;background:#1a1a24;border-radius:16px;padding:16px;border:1px solid #2a2a35}
+.price-breakdown h3{font-size:13px;font-weight:700;color:#888;margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px}
+.price-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0}
+.price-row span:first-child{font-size:13px;color:#999}
+.price-row span:last-child{font-size:13px;font-weight:600;color:#fff}
+.price-row.total{border-top:1px solid #2a2a35;margin-top:8px;padding-top:12px}
+.price-row.total span{font-size:16px;font-weight:800;color:#fff}
+.price-row.savings{background:#0d3d1a;border-radius:8px;padding:8px 10px;margin-top:6px}
+.price-row.savings span:first-child{font-size:12px;color:#4ade80;font-weight:600}
+.price-row.savings span:last-child{font-size:12px;color:#4ade80;font-weight:700}
+.cart-cta{position:absolute;bottom:70px;left:0;right:0;padding:10px 14px}
+.btn-place{width:100%;padding:15px;background:linear-gradient(135deg,#ff6b35,#e85d26);border:none;border-radius:16px;color:#fff;font-size:16px;font-weight:800;cursor:pointer;transition:all .2s;box-shadow:0 8px 24px rgba(255,107,53,.4)}
+.btn-place:hover{transform:translateY(-2px)}
+#sc-success{background:linear-gradient(160deg,#0d2218,#0f0f1a,#1a0a0a)}
+.success-inner{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;text-align:center}
+.success-anim{width:90px;height:90px;background:linear-gradient(135deg,#059669,#10b981);border-radius:32px;display:flex;align-items:center;justify-content:center;font-size:48px;margin-bottom:20px;box-shadow:0 20px 48px rgba(16,185,129,.4);animation:pop .5s cubic-bezier(.175,.885,.32,1.275)}
+@keyframes pop{0%{transform:scale(0);opacity:0}100%{transform:scale(1);opacity:1}}
+.success-inner h2{font-size:26px;font-weight:800;margin-bottom:8px}
+.success-inner p{font-size:14px;color:#888;line-height:1.6;margin-bottom:24px}
+.order-id{background:#1a1a24;border:1px solid #2a2a35;border-radius:12px;padding:12px 20px;margin-bottom:20px;font-size:13px;color:#888}
+.order-id strong{color:#ff6b35;display:block;font-size:18px;font-weight:800;margin-bottom:2px}
+.track-steps{width:100%;display:flex;justify-content:space-between;margin-bottom:24px;position:relative}
+.track-steps::before{content:'';position:absolute;top:14px;left:0;right:0;height:2px;background:#2a2a35}
+.track-step{display:flex;flex-direction:column;align-items:center;gap:6px;z-index:1}
+.track-dot{width:28px;height:28px;border-radius:50%;background:#2a2a35;display:flex;align-items:center;justify-content:center;font-size:13px}
+.track-dot.done{background:linear-gradient(135deg,#059669,#10b981)}
+.track-dot.act{background:linear-gradient(135deg,#ff6b35,#e85d26)}
+.track-step span{font-size:9px;color:#888;font-weight:600;text-transform:uppercase;text-align:center}
+#sc-explore{background:#0f0f1a}
+.explore-inner{height:100%;overflow-y:auto;padding-bottom:70px;scrollbar-width:none}
+.explore-inner::-webkit-scrollbar{display:none}
+.explore-header{padding:42px 16px 12px}
+.explore-header h2{font-size:22px;font-weight:800}
+.explore-header p{font-size:13px;color:#888;margin-top:2px}
+.filter-row{display:flex;gap:8px;padding:0 14px 14px;overflow-x:auto;scrollbar-width:none}
+.filter-row::-webkit-scrollbar{display:none}
+.filter-chip{padding:7px 14px;border-radius:20px;font-size:12px;font-weight:600;border:1.5px solid #2a2a35;color:#888;background:#1a1a24;white-space:nowrap;cursor:pointer;transition:all .2s}
+.filter-chip:hover,.filter-chip.sel{background:#1e1a2e;border-color:#7c3aed;color:#a78bfa}
+.explore-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 14px}
+.mini-rest-card{background:#1a1a24;border-radius:14px;overflow:hidden;cursor:pointer;transition:transform .2s;border:1px solid #2a2a35}
+.mini-rest-card:hover{transform:scale(1.02)}
+.mini-rest-card img{width:100%;height:100px;object-fit:cover}
+.mini-rest-info{padding:10px}
+.mini-rest-info h4{font-size:13px;font-weight:700;margin-bottom:2px}
+.mini-rest-info p{font-size:10px;color:#888;margin-bottom:6px}
+.mini-meta{display:flex;align-items:center;gap:6px;font-size:10px;color:#888}
+.mini-rating{background:#1b3a2e;color:#34d399;padding:2px 5px;border-radius:5px;font-weight:700;font-size:10px}
+#sc-profile{background:#0f0f1a}
+.profile-inner{height:100%;overflow-y:auto;padding-bottom:70px;scrollbar-width:none}
+.profile-inner::-webkit-scrollbar{display:none}
+.profile-hero{background:linear-gradient(135deg,#1a0f2e,#0f0f1a);padding:50px 20px 24px;text-align:center}
+.profile-avatar-wrap{position:relative;display:inline-block;margin-bottom:14px}
+.profile-avatar{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#ff6b35,#f7c59f);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto}
+.profile-badge{position:absolute;bottom:-2px;right:-2px;background:linear-gradient(135deg,#fbbf24,#f59e0b);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;border:2px solid #0f0f1a}
+.profile-name{font-size:20px;font-weight:800;margin-bottom:4px}
+.profile-email{font-size:13px;color:#888;margin-bottom:16px}
+.profile-stats{display:flex;justify-content:center;gap:24px}
+.pstat .val{font-size:20px;font-weight:800;color:#ff6b35}
+.pstat .lbl{font-size:11px;color:#888}
+.menu-list{padding:16px 14px}
+.menu-item{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid #1e1e2a;cursor:pointer;transition:padding .15s}
+.menu-item:hover{padding-left:4px}
+.menu-item .mi-left{display:flex;align-items:center;gap:12px}
+.mi-icon{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.mi-text h4{font-size:14px;font-weight:600}
+.mi-text p{font-size:11px;color:#888;margin-top:1px}
+.mi-arrow{color:#555;font-size:18px}
+.bottom-nav{position:absolute;bottom:0;left:0;right:0;height:62px;background:#18181f;border-top:1px solid #2a2a35;display:flex;align-items:center;justify-content:space-around;padding:0 6px;z-index:20}
+.nav-btn{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;padding:6px 0;cursor:pointer;transition:all .2s;border:none;background:none;position:relative}
+.nav-btn .nav-icon{font-size:20px;color:#555;transition:color .2s}
+.nav-btn span.nav-lbl{font-size:9px;font-weight:600;color:#555;transition:color .2s;text-transform:uppercase;letter-spacing:.5px}
+.nav-btn.active .nav-icon{color:#ff6b35}
+.nav-btn.active .nav-lbl{color:#ff6b35}
+.nav-badge{position:absolute;top:4px;right:14px;min-width:16px;height:16px;background:#ff6b35;border-radius:8px;font-size:9px;font-weight:700;color:#fff;display:none;align-items:center;justify-content:center;padding:0 3px}
+.nav-badge.show{display:flex}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(60px);background:#22222e;border:1px solid #2a2a35;color:#fff;padding:10px 20px;border-radius:12px;font-size:13px;font-weight:600;z-index:999;transition:transform .3s,opacity .3s;opacity:0;pointer-events:none;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+.lsb::-webkit-scrollbar,.rpanel::-webkit-scrollbar{width:3px}
+.lsb::-webkit-scrollbar-thumb,.rpanel::-webkit-scrollbar-thumb{background:#2a2a35;border-radius:4px}
+/* Bottom sheet */
+.sheet-overlay{position:absolute;inset:0;background:rgba(0,0,0,.65);z-index:40;opacity:0;pointer-events:none;transition:opacity .3s}
+.sheet-overlay.show{opacity:1;pointer-events:all}
+.bottom-sheet{position:absolute;bottom:0;left:0;right:0;background:#1e1e2a;border-radius:22px 22px 0 0;border-top:1px solid #2a2a35;padding:0 0 20px;transform:translateY(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);z-index:41}
+.bottom-sheet.open{transform:translateY(0)}
+.sheet-handle{width:36px;height:4px;background:#2a2a35;border-radius:2px;margin:12px auto 16px}
+.sheet-header{display:flex;align-items:center;justify-content:space-between;padding:0 16px 14px;border-bottom:1px solid #2a2a35}
+.sheet-header h3{font-size:16px;font-weight:700}
+.sheet-close{background:none;border:none;color:#888;font-size:22px;cursor:pointer;padding:0;line-height:1}
+.sheet-body{padding:16px}
+.sheet-field{margin-bottom:14px}
+.sheet-field label{display:block;font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.sheet-input{width:100%;padding:12px 14px;background:#22222e;border:1.5px solid #2a2a35;border-radius:12px;color:#fff;font-size:14px;font-family:inherit;outline:none;transition:border-color .2s}
+.sheet-input:focus{border-color:#ff6b3580}
+.sheet-input::placeholder{color:#555}
+.type-btns{display:flex;gap:8px;flex-wrap:wrap}
+.type-btn{padding:7px 14px;background:#22222e;border:1.5px solid #2a2a35;border-radius:10px;color:#aaa;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+.type-btn.sel,.type-btn:hover{background:#1e1a2e;border-color:#ff6b35;color:#ff6b35}
+/* Language screen */
+.lang-option{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #1e1e2a;cursor:pointer;transition:background .15s}
+.lang-option:hover{background:#1e1e2a}
+.lang-option.active{background:#1a1224}
+.lang-left{display:flex;align-items:center;gap:12px}
+.lang-flag{font-size:22px}
+.lang-name{font-size:14px;font-weight:600}
+.lang-native{font-size:11px;color:#888;margin-top:1px}
+.lang-check{color:#ff6b35;font-size:18px;font-weight:700}
+/* Light mode (dark mode off) */
+body.light-mode{background:#f0efe8;color:#111}
+body.light-mode .topbar{background:#fff;border-bottom-color:#ddd}
+body.light-mode .topbar-logo span{-webkit-text-fill-color:unset;color:#ff6b35}
+body.light-mode .lsb,body.light-mode .rpanel{background:#fafafa;border-color:#ddd}
+body.light-mode .center{background:#f0efe8}
+body.light-mode .shell{background:#f0efe8}
+body.light-mode .flow-step:hover{background:#eee}
+body.light-mode .stat-card{background:#e8e8e0}
+body.light-mode .test-row{background:#e8e8e0}
+body.light-mode .fb-ta{background:#e8e8e0;border-color:#ddd;color:#111}
+body.light-mode .fb-tag{background:#e8e8e0;border-color:#ddd;color:#555}
+/* Notifications bar */
+.notif-bar{display:none;align-items:center;gap:8px;background:#1a1f2e;border-bottom:1px solid #2a2a35;padding:8px 14px;font-size:11px;color:#60a5fa;font-weight:600}
+.notif-bar.show{display:flex}
+.notif-bar .nb-dot{width:6px;height:6px;border-radius:50%;background:#60a5fa;flex-shrink:0;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── SUBSCREEN SHARED ── */
+.sub-screen-inner{height:100%;overflow-y:auto;padding-bottom:20px;scrollbar-width:none}
+.sub-screen-inner::-webkit-scrollbar{display:none}
+.sub-header{display:flex;align-items:center;gap:12px;padding:40px 16px 16px;border-bottom:1px solid #1e1e2a}
+.sub-header h2{font-size:18px;font-weight:800}
+.sub-back{width:34px;height:34px;background:#22222e;border:none;border-radius:12px;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s;flex-shrink:0}
+.sub-back:hover{background:#2a2a35}
+
+/* ── ORDERS ── */
+.order-card{margin:12px 14px 0;background:#1a1a24;border:1px solid #2a2a35;border-radius:16px;overflow:hidden;cursor:pointer;transition:transform .15s}
+.order-card:hover{transform:scale(1.01)}
+.order-card-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #22222e}
+.order-rest-info{display:flex;align-items:center;gap:10px}
+.order-rest-icon{width:38px;height:38px;border-radius:12px;object-fit:cover;flex-shrink:0}
+.order-rest-info h4{font-size:14px;font-weight:700;margin-bottom:1px}
+.order-rest-info p{font-size:11px;color:#888}
+.order-status{font-size:11px;font-weight:700;padding:4px 9px;border-radius:8px}
+.order-status.delivered{background:#0d3d2e;color:#34d399}
+.order-status.preparing{background:#2d1f0a;color:#fbbf24}
+.order-status.cancelled{background:#3d0d0d;color:#f87171}
+.order-card-body{padding:10px 14px;display:flex;align-items:center;justify-content:space-between}
+.order-items-text{font-size:12px;color:#888;margin-bottom:3px}
+.order-total{font-size:15px;font-weight:800}
+.order-date{font-size:11px;color:#666}
+.reorder-btn{padding:7px 14px;background:linear-gradient(135deg,#ff6b35,#e85d26);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;transition:transform .15s}
+.reorder-btn:hover{transform:scale(1.04)}
+
+/* ── ADDRESSES ── */
+.addr-card{margin:12px 14px 0;background:#1a1a24;border:1px solid #2a2a35;border-radius:16px;padding:14px}
+.addr-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.addr-type{display:flex;align-items:center;gap:8px}
+.addr-type-icon{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.addr-type h4{font-size:14px;font-weight:700}
+.addr-default{font-size:10px;font-weight:700;background:#1a1f2e;color:#60a5fa;padding:3px 7px;border-radius:6px;border:1px solid #3b4b6e}
+.addr-text{font-size:12px;color:#888;line-height:1.5;margin-bottom:10px}
+.addr-actions{display:flex;gap:8px}
+.addr-btn{flex:1;padding:7px;background:#22222e;border:1px solid #2a2a35;border-radius:10px;color:#aaa;font-size:12px;font-weight:600;cursor:pointer;text-align:center;transition:all .2s}
+.addr-btn:hover{background:#2a2a35;color:#fff}
+.addr-btn.del:hover{background:#3d0d0d;color:#f87171;border-color:#f8717140}
+.add-addr-btn{margin:14px;width:calc(100% - 28px);padding:13px;background:#1a1a24;border:1.5px dashed #2a2a35;border-radius:14px;color:#888;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.add-addr-btn:hover{border-color:#ff6b35;color:#ff6b35;background:#1a1218}
+
+/* ── PAYMENTS ── */
+.pay-section-title{font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:1px;padding:14px 14px 8px}
+.upi-card{margin:0 14px;background:#1a1a24;border:1px solid #2a2a35;border-radius:14px;padding:14px;display:flex;align-items:center;justify-content:space-between}
+.upi-info{display:flex;align-items:center;gap:10px}
+.upi-logo{width:38px;height:38px;background:linear-gradient(135deg,#1e3a8a,#3b82f6);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.upi-info h4{font-size:14px;font-weight:700;margin-bottom:2px}
+.upi-info p{font-size:12px;color:#888}
+.cc-card{margin:8px 14px 0;border-radius:16px;padding:16px;background:linear-gradient(135deg,#1e1e35,#2a1a3e);border:1px solid #3a2a5e;position:relative;overflow:hidden}
+.cc-card::before{content:'';position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:rgba(124,58,237,.15);border-radius:50%}
+.cc-chip{width:28px;height:22px;background:linear-gradient(135deg,#fbbf24,#f59e0b);border-radius:4px;margin-bottom:12px}
+.cc-number{font-size:14px;font-weight:600;letter-spacing:3px;margin-bottom:12px;color:#ccc}
+.cc-bottom{display:flex;align-items:center;justify-content:space-between}
+.cc-name{font-size:13px;font-weight:700}
+.cc-exp{font-size:11px;color:#888}
+.cc-brand{font-size:20px}
+.add-pay-btn{margin:14px;width:calc(100% - 28px);padding:12px;background:#1a1a24;border:1.5px dashed #2a2a35;border-radius:14px;color:#888;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.add-pay-btn:hover{border-color:#7c3aed;color:#a78bfa;background:#1a1224}
+
+/* ── OFFERS ── */
+.offer-card{margin:12px 14px 0;background:#1a1a24;border:1px solid #2a2a35;border-radius:16px;overflow:hidden}
+.offer-banner{width:100%;height:80px;object-fit:cover;display:block}
+.offer-body{padding:12px 14px}
+.offer-body h4{font-size:14px;font-weight:700;margin-bottom:4px}
+.offer-body p{font-size:12px;color:#888;margin-bottom:10px;line-height:1.4}
+.offer-foot{display:flex;align-items:center;justify-content:space-between}
+.coupon-code{font-size:12px;font-weight:800;color:#ff6b35;background:#1a0f0a;border:1.5px dashed #ff6b3560;padding:5px 10px;border-radius:8px;letter-spacing:1px}
+.apply-btn{padding:7px 16px;background:linear-gradient(135deg,#ff6b35,#e85d26);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;transition:transform .15s}
+.apply-btn:hover{transform:scale(1.04)}
+.offer-tag-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;margin-bottom:6px}
+.offer-tag-badge.hot{background:#2d1a0a;color:#fb923c;border:1px solid #fb923c40}
+.offer-tag-badge.new-badge{background:#1a1f3d;color:#818cf8;border:1px solid #818cf840}
+.offer-tag-badge.free{background:#0d3d2e;color:#34d399;border:1px solid #34d39940}
+.offer-validity{font-size:10px;color:#666;margin-top:6px}
+
+/* ── SETTINGS ── */
+.setting-group{padding:0 14px;margin-top:12px}
+.setting-group-title{font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:1px;padding:12px 0 8px}
+.setting-row{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid #1e1e2a}
+.setting-row:last-child{border-bottom:none}
+.setting-row-left{display:flex;align-items:center;gap:12px}
+.setting-row-left .s-ico{width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.setting-row-left h4{font-size:14px;font-weight:600}
+.setting-row-left p{font-size:11px;color:#888;margin-top:1px}
+.toggle{width:42px;height:24px;background:#2a2a35;border-radius:12px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;border:none}
+.toggle.on{background:linear-gradient(135deg,#ff6b35,#e85d26)}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.toggle.on::after{transform:translateX(18px)}
+.setting-arrow{color:#555;font-size:18px}
+.danger-btn{margin:14px;width:calc(100% - 28px);padding:13px;background:#1a0a0a;border:1px solid #3d0d0d;border-radius:14px;color:#f87171;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.danger-btn:hover{background:#2d0a0a;border-color:#f87171}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-logo">
+    <div class="icon">🍜</div>
+    <span>FoodRush</span>
+  </div>
+  <div class="topbar-meta">
+    <span class="badge green">● Live</span>
+    <span class="badge orange">4 Days Left</span>
+    <span class="badge blue">Interactive Prototype</span>
+  </div>
+  <div class="topbar-actions">
+    <button class="btn-sm btn-reset" onclick="resetProto()">↺ Reset</button>
+    <button class="btn-sm btn-export" onclick="exportFeedback()">⤓ Export</button>
+  </div>
+</header>
+
+<div class="shell">
+
+<!-- LEFT SIDEBAR -->
+<aside class="lsb">
+  <h3>User Flow</h3>
+  <div class="flow-step" id="fs-splash" onclick="goScreen('splash')"><div class="dot done">✓</div><div class="label">Splash</div></div>
+  <div class="flow-step" id="fs-auth" onclick="goScreen('signin')"><div class="dot idle">2</div><div class="label">Sign In / Up</div></div>
+  <div class="flow-step" id="fs-home" onclick="goScreen('home')"><div class="dot idle">3</div><div class="label">Home Feed</div></div>
+  <div class="flow-step" id="fs-rest" onclick="openRestaurant('bella')"><div class="dot idle">4</div><div class="label">Restaurant</div></div>
+  <div class="flow-step" id="fs-cart" onclick="goScreen('cart')"><div class="dot idle">5</div><div class="label">Cart + GST</div></div>
+  <div class="flow-step" id="fs-success" onclick="goScreen('success')"><div class="dot idle">6</div><div class="label">Order Placed</div></div>
+  <div class="divider"></div>
+  <h3>Live Stats</h3>
+  <div class="stat-grid">
+    <div class="stat-card"><div class="val" id="st-taps">0</div><div class="lbl">Taps</div></div>
+    <div class="stat-card"><div class="val" id="st-screens">1</div><div class="lbl">Screens</div></div>
+    <div class="stat-card"><div class="val" id="st-cart">0</div><div class="lbl">In Cart</div></div>
+    <div class="stat-card"><div class="val" id="st-fb">0</div><div class="lbl">Feedback</div></div>
+  </div>
+  <div class="divider"></div>
+  <h3>Analytics</h3>
+  <div class="analytics-row"><span class="albl">Current Screen</span><span class="aval" id="cur-screen">Splash</span></div>
+  <div class="analytics-row"><span class="albl">Cart Total</span><span class="aval" id="cur-total">₹0</span></div>
+  <div class="analytics-row"><span class="albl">Cart Items</span><span class="aval" id="cur-items">0</span></div>
+  <div class="analytics-row"><span class="albl">Logged In</span><span class="aval" id="cur-login">No</span></div>
+</aside>
+
+<!-- CENTER -->
+<main class="center">
+  <div class="device-wrap">
+    <div class="device" id="phone">
+      <div class="notch"></div>
+
+      <!-- SPLASH -->
+      <div class="screen active" id="sc-splash">
+        <div class="splash-inner">
+          <div class="splash-logo">🍜</div>
+          <h1 class="splash-title">Craving<br><span>something great?</span></h1>
+          <p class="splash-sub">Order from the best restaurants near you. Fast delivery, fresh food.</p>
+          <button class="btn-pill btn-primary" onclick="tap();goScreen('signin')">Get Started →</button>
+          <button class="btn-pill btn-secondary" onclick="tap();skipToHome()">Continue as Guest</button>
+          <button class="btn-link" onclick="tap();goScreen('signin')">Already have an account? Sign in</button>
+        </div>
+      </div>
+
+      <!-- SIGN IN -->
+      <div class="screen" id="sc-signin">
+        <div class="auth-inner">
+          <button class="back-btn" onclick="tap();goBack()">‹</button>
+          <div class="auth-head">
+            <h2>Welcome back 👋</h2>
+            <p>Sign in to continue ordering</p>
+          </div>
+          <div class="form-group">
+            <label>Email Address</label>
+            <input class="form-input" id="si-email" type="email" placeholder="you@example.com">
+            <div class="err-msg" id="si-email-err">Please enter a valid email address</div>
+            <div class="err-msg" id="si-noact-err" style="color:#fbbf24">No account found. <button onclick="tap();goScreen('signup')" style="background:none;border:none;color:#ff6b35;font-weight:700;cursor:pointer;font-size:12px">Sign up →</button></div>
+            <div class="err-msg" id="si-unver-err" style="color:#fbbf24">Email not verified yet. Check your inbox.</div>
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input class="form-input" id="si-pass" type="password" placeholder="••••••••">
+            <div class="err-msg" id="si-pass-err">Password must be at least 6 characters</div>
+            <div class="err-msg" id="si-wrongpass-err">Incorrect password. Try again.</div>
+          </div>
+          <button class="btn-pill btn-primary" onclick="tap();doSignIn()" style="margin-top:8px">Sign In →</button>
+          <div class="auth-switch">Don't have an account? <button onclick="tap();goScreen('signup')">Create one</button></div>
+        </div>
+      </div>
+
+      <!-- SIGN UP -->
+      <div class="screen" id="sc-signup">
+        <div class="auth-inner">
+          <button class="back-btn" onclick="tap();goBack()">‹</button>
+          <div class="auth-head">
+            <h2>Create account ✨</h2>
+            <p>Join thousands of happy foodies</p>
+          </div>
+          <div class="form-group">
+            <label>Full Name</label>
+            <input class="form-input" id="su-name" type="text" placeholder="Your full name">
+            <div class="err-msg" id="su-name-err">Name is required</div>
+          </div>
+          <div class="form-group">
+            <label>Email Address</label>
+            <input class="form-input" id="su-email" type="email" placeholder="you@example.com">
+            <div class="err-msg" id="su-email-err">Please enter a valid email address</div>
+            <div class="err-msg" id="su-exists-err">Account already exists. <button onclick="tap();goScreen('signin')" style="background:none;border:none;color:#ff6b35;font-weight:700;cursor:pointer;font-size:12px">Sign in →</button></div>
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input class="form-input" id="su-pass" type="password" placeholder="Min. 6 characters">
+            <div class="err-msg" id="su-pass-err">Password must be at least 6 characters</div>
+          </div>
+          <div class="form-group">
+            <label>Confirm Password</label>
+            <input class="form-input" id="su-cpass" type="password" placeholder="Repeat password">
+            <div class="err-msg" id="su-cpass-err">Passwords do not match</div>
+          </div>
+          <button class="btn-pill btn-primary" onclick="tap();doSignUp()" style="margin-top:8px">Create Account →</button>
+          <div class="auth-switch">Already have an account? <button onclick="tap();goScreen('signin')">Sign in</button></div>
+        </div>
+      </div>
+
+      <!-- EMAIL VERIFY -->
+      <div class="screen" id="sc-verify">
+        <div class="verify-inner">
+          <button class="back-btn" onclick="tap();goBack()">‹</button>
+          <div class="verify-icon">📧</div>
+          <h2>Check your email</h2>
+          <p class="verify-email" id="verify-email-txt"></p>
+          <p>We've sent a confirmation link to your email. Click the link to verify and activate your account.</p>
+          <button class="btn-pill btn-primary" style="margin-top:4px" onclick="tap();sendVerifyEmail()">Open Mail App →</button>
+          <button class="btn-pill btn-secondary" style="margin-top:10px" onclick="tap();confirmVerified()">✓ I've verified my email</button>
+          <button class="btn-link" onclick="tap();sendVerifyEmail()">Resend email</button>
+        </div>
+      </div>
+
+      <!-- HOME -->
+      <div class="screen" id="sc-home">
+        <div class="phone-sb" id="home-sb">
+          <div class="notif-bar" id="notif-bar"><span class="nb-dot"></span><span id="notif-text">Your order is being prepared 🍳</span></div>
+          <div class="phone-header">
+            <div class="left">
+              <h1>Hey, <span id="user-name-disp">Foodie</span> 👋</h1>
+              <p id="loc-text">📍 Koramangala, Bengaluru</p>
+            </div>
+            <div class="avatar" onclick="tap();switchTab('profile')">👤</div>
+          </div>
+          <div class="search-bar" onclick="tap();switchTab('explore')">
+            <span class="s-icon">🔍</span>
+            <span>Search restaurants or dishes…</span>
+          </div>
+          <div class="section-head"><h2>Categories</h2></div>
+          <div class="cats">
+            <div class="cat-chip" onclick="tap();switchTab('explore')"><div class="cat-icon" style="background:#1a1224">🍕</div><span>Pizza</span></div>
+            <div class="cat-chip" onclick="tap();switchTab('explore')"><div class="cat-icon" style="background:#1a1a12">🍔</div><span>Burgers</span></div>
+            <div class="cat-chip" onclick="tap();switchTab('explore')"><div class="cat-icon" style="background:#1a1812">🍛</div><span>Biryani</span></div>
+            <div class="cat-chip" onclick="tap();switchTab('explore')"><div class="cat-icon" style="background:#121a1a">🍣</div><span>Sushi</span></div>
+            <div class="cat-chip" onclick="tap();switchTab('explore')"><div class="cat-icon" style="background:#1a1218">🍰</div><span>Desserts</span></div>
+            <div class="cat-chip" onclick="tap();switchTab('explore')"><div class="cat-icon" style="background:#121a12">🥗</div><span>Healthy</span></div>
+          </div>
+          <div id="home-offers-section">
+          <div class="section-head"><h2>🔥 Offers</h2></div>
+          <div class="banners">
+            <div class="banner-card" onclick="tap();openRestaurant('bella')">
+              <img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=440&h=200&q=80" alt="offer" loading="lazy">
+              <div class="btext"><h4>50% OFF First Order</h4><p>Use code FRESH50</p></div>
+            </div>
+            <div class="banner-card" onclick="tap();openRestaurant('spice')">
+              <img src="https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=440&h=200&q=80" alt="offer" loading="lazy">
+              <div class="btext"><h4>Free Delivery</h4><p>Orders above ₹299</p></div>
+            </div>
+            <div class="banner-card" onclick="tap();openRestaurant('tokyo')">
+              <img src="https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?auto=format&fit=crop&w=440&h=200&q=80" alt="offer" loading="lazy">
+              <div class="btext"><h4>New in Town</h4><p>Try Tokyo House</p></div>
+            </div>
+          </div>
+          </div>
+          <div class="section-head"><h2>Top Restaurants</h2><button onclick="tap();switchTab('explore')">See All</button></div>
+          <div class="rest-cards" id="home-rest-cards"></div>
+          <div style="height:16px"></div>
+        </div>
+        <nav class="bottom-nav">
+          <button class="nav-btn active" data-nav="home" onclick="tap();switchTab('home')"><span class="nav-icon">🏠</span><span class="nav-lbl">Home</span></button>
+          <button class="nav-btn" data-nav="explore" onclick="tap();switchTab('explore')"><span class="nav-icon">🔍</span><span class="nav-lbl">Explore</span></button>
+          <button class="nav-btn" data-nav="cart" onclick="tap();switchTab('cart')"><span class="nav-icon">🛒</span><span class="nav-lbl">Cart</span><div class="nav-badge" id="cart-badge">0</div></button>
+          <button class="nav-btn" data-nav="profile" onclick="tap();switchTab('profile')"><span class="nav-icon">👤</span><span class="nav-lbl">Profile</span></button>
+        </nav>
+      </div>
+
+      <!-- RESTAURANT DETAIL -->
+      <div class="screen" id="sc-restaurant">
+        <div class="phone-sb" id="rest-sb"></div>
+        <nav class="bottom-nav">
+          <button class="nav-btn" data-nav="home" onclick="tap();switchTab('home')"><span class="nav-icon">🏠</span><span class="nav-lbl">Home</span></button>
+          <button class="nav-btn" data-nav="explore" onclick="tap();switchTab('explore')"><span class="nav-icon">🔍</span><span class="nav-lbl">Explore</span></button>
+          <button class="nav-btn" data-nav="cart" onclick="tap();switchTab('cart')"><span class="nav-icon">🛒</span><span class="nav-lbl">Cart</span><div class="nav-badge" id="cart-badge2">0</div></button>
+          <button class="nav-btn" data-nav="profile" onclick="tap();switchTab('profile')"><span class="nav-icon">👤</span><span class="nav-lbl">Profile</span></button>
+        </nav>
+      </div>
+
+      <!-- EXPLORE -->
+      <div class="screen" id="sc-explore">
+        <div class="explore-inner">
+          <div class="explore-header"><h2>Explore</h2><p>Discover something new today</p></div>
+          <div class="filter-row" id="filter-row">
+            <div class="filter-chip sel" onclick="tap();setFilter(this)">All</div>
+            <div class="filter-chip" onclick="tap();setFilter(this)">⭐ Top Rated</div>
+            <div class="filter-chip" onclick="tap();setFilter(this)">⚡ Fast Delivery</div>
+            <div class="filter-chip" onclick="tap();setFilter(this)">🥗 Veg Only</div>
+            <div class="filter-chip" onclick="tap();setFilter(this)">🏷️ Offers</div>
+          </div>
+          <div class="explore-grid" id="explore-grid"></div>
+        </div>
+        <nav class="bottom-nav">
+          <button class="nav-btn" data-nav="home" onclick="tap();switchTab('home')"><span class="nav-icon">🏠</span><span class="nav-lbl">Home</span></button>
+          <button class="nav-btn active" data-nav="explore" onclick="tap();switchTab('explore')"><span class="nav-icon">🔍</span><span class="nav-lbl">Explore</span></button>
+          <button class="nav-btn" data-nav="cart" onclick="tap();switchTab('cart')"><span class="nav-icon">🛒</span><span class="nav-lbl">Cart</span><div class="nav-badge" id="cart-badge3">0</div></button>
+          <button class="nav-btn" data-nav="profile" onclick="tap();switchTab('profile')"><span class="nav-icon">👤</span><span class="nav-lbl">Profile</span></button>
+        </nav>
+      </div>
+
+      <!-- CART -->
+      <div class="screen" id="sc-cart">
+        <div class="cart-inner" id="cart-body"></div>
+        <nav class="bottom-nav">
+          <button class="nav-btn" data-nav="home" onclick="tap();switchTab('home')"><span class="nav-icon">🏠</span><span class="nav-lbl">Home</span></button>
+          <button class="nav-btn" data-nav="explore" onclick="tap();switchTab('explore')"><span class="nav-icon">🔍</span><span class="nav-lbl">Explore</span></button>
+          <button class="nav-btn active" data-nav="cart" onclick="tap();switchTab('cart')"><span class="nav-icon">🛒</span><span class="nav-lbl">Cart</span><div class="nav-badge show" id="cart-badge4">0</div></button>
+          <button class="nav-btn" data-nav="profile" onclick="tap();switchTab('profile')"><span class="nav-icon">👤</span><span class="nav-lbl">Profile</span></button>
+        </nav>
+      </div>
+
+      <!-- SUCCESS -->
+      <div class="screen" id="sc-success">
+        <div class="success-inner">
+          <div class="success-anim">✓</div>
+          <h2>Order Placed! 🎉</h2>
+          <p>Your food is being prepared.<br>Estimated delivery: <strong style="color:#fff">28–35 mins</strong></p>
+          <div class="order-id"><strong id="order-num">#FR240618</strong>Track your order</div>
+          <div class="track-steps">
+            <div class="track-step"><div class="track-dot done">✓</div><span>Confirmed</span></div>
+            <div class="track-step"><div class="track-dot act">👨‍🍳</div><span>Preparing</span></div>
+            <div class="track-step"><div class="track-dot">🛵</div><span>On way</span></div>
+            <div class="track-step"><div class="track-dot">🏠</div><span>Delivered</span></div>
+          </div>
+          <button class="btn-pill btn-primary" onclick="tap();goScreen('home')">Back to Home</button>
+          <button class="btn-pill btn-secondary" style="margin-top:10px" onclick="tap();goScreen('home')">Rate experience</button>
+        </div>
+      </div>
+
+      <!-- PROFILE -->
+      <div class="screen" id="sc-profile">
+        <div class="profile-inner">
+          <div class="profile-hero">
+            <div class="profile-avatar-wrap">
+              <div class="profile-avatar">👤</div>
+              <div class="profile-badge">⭐</div>
+            </div>
+            <div class="profile-name" id="p-name">Foodie</div>
+            <div class="profile-email" id="p-email">guest@foodrush.app</div>
+            <div class="profile-stats">
+              <div class="pstat"><div class="val">12</div><div class="lbl">Orders</div></div>
+              <div class="pstat"><div class="val">4.9</div><div class="lbl">Rating</div></div>
+              <div class="pstat"><div class="val">₹2.4k</div><div class="lbl">Saved</div></div>
+            </div>
+          </div>
+          <div class="menu-list">
+            <div class="menu-item" onclick="tap();goScreen('orders')"><div class="mi-left"><div class="mi-icon" style="background:#1a1f2e">📦</div><div class="mi-text"><h4>My Orders</h4><p>12 orders placed</p></div></div><span class="mi-arrow">›</span></div>
+            <div class="menu-item" onclick="tap();goScreen('addresses')"><div class="mi-left"><div class="mi-icon" style="background:#1a2e1f">📍</div><div class="mi-text"><h4>Saved Addresses</h4><p>2 addresses saved</p></div></div><span class="mi-arrow">›</span></div>
+            <div class="menu-item" onclick="tap();goScreen('payments')"><div class="mi-left"><div class="mi-icon" style="background:#2e1a1a">💳</div><div class="mi-text"><h4>Payment Methods</h4><p>UPI, Cards</p></div></div><span class="mi-arrow">›</span></div>
+            <div class="menu-item" onclick="tap();goScreen('offers')"><div class="mi-left"><div class="mi-icon" style="background:#2e2a1a">🎁</div><div class="mi-text"><h4>Offers &amp; Coupons</h4><p>3 active offers</p></div></div><span class="mi-arrow">›</span></div>
+            <div class="menu-item" onclick="tap();goScreen('settings')"><div class="mi-left"><div class="mi-icon" style="background:#1a2e2e">⚙️</div><div class="mi-text"><h4>Settings</h4><p>Notifications, Privacy</p></div></div><span class="mi-arrow">›</span></div>
+            <div class="menu-item" onclick="tap();doSignOut()"><div class="mi-left"><div class="mi-icon" style="background:#2e1a1a">🚪</div><div class="mi-text"><h4>Sign Out</h4><p>See you next time</p></div></div><span class="mi-arrow">›</span></div>
+          </div>
+        </div>
+        <nav class="bottom-nav">
+          <button class="nav-btn" data-nav="home" onclick="tap();switchTab('home')"><span class="nav-icon">🏠</span><span class="nav-lbl">Home</span></button>
+          <button class="nav-btn" data-nav="explore" onclick="tap();switchTab('explore')"><span class="nav-icon">🔍</span><span class="nav-lbl">Explore</span></button>
+          <button class="nav-btn" data-nav="cart" onclick="tap();switchTab('cart')"><span class="nav-icon">🛒</span><span class="nav-lbl">Cart</span><div class="nav-badge" id="cart-badge5">0</div></button>
+          <button class="nav-btn active" data-nav="profile" onclick="tap();switchTab('profile')"><span class="nav-icon">👤</span><span class="nav-lbl">Profile</span></button>
+        </nav>
+      </div>
+
+
+      <!-- MY ORDERS -->
+      <div class="screen" id="sc-orders">
+        <div class="sub-screen-inner">
+          <div class="sub-header">
+            <button class="sub-back" onclick="tap();goBack()">‹</button>
+            <h2>My Orders</h2>
+          </div>
+          <div class="order-card" onclick="tap();showToast('Reordering from Bella Italia 🍕')">
+            <div class="order-card-head">
+              <div class="order-rest-info">
+                <img class="order-rest-icon" src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=80&h=80&q=80" alt="Bella">
+                <div><h4>Bella Italia</h4><p>Jun 15, 2026 · 2 items</p></div>
+              </div>
+              <span class="order-status delivered">Delivered</span>
+            </div>
+            <div class="order-card-body">
+              <div><div class="order-items-text">Margherita Pizza, Tiramisu</div><div class="order-total">₹456</div></div>
+              <button class="reorder-btn" onclick="event.stopPropagation();tap();openRestaurant('bella')">Reorder</button>
+            </div>
+          </div>
+          <div class="order-card" onclick="tap();showToast('Order is being prepared 👨‍🍳')">
+            <div class="order-card-head">
+              <div class="order-rest-info">
+                <img class="order-rest-icon" src="https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?auto=format&fit=crop&w=80&h=80&q=80" alt="Tokyo">
+                <div><h4>Tokyo House</h4><p>Jun 18, 2026 · 3 items</p></div>
+              </div>
+              <span class="order-status preparing">Preparing</span>
+            </div>
+            <div class="order-card-body">
+              <div><div class="order-items-text">Salmon Roll, Ramen, Gyoza</div><div class="order-total">₹917</div></div>
+              <button class="reorder-btn" onclick="event.stopPropagation();tap();goScreen('success')">Track</button>
+            </div>
+          </div>
+          <div class="order-card" onclick="tap();showToast('Loading order details…')">
+            <div class="order-card-head">
+              <div class="order-rest-info">
+                <img class="order-rest-icon" src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=80&h=80&q=80" alt="Spice">
+                <div><h4>Spice Garden</h4><p>Jun 12, 2026 · 2 items</p></div>
+              </div>
+              <span class="order-status delivered">Delivered</span>
+            </div>
+            <div class="order-card-body">
+              <div><div class="order-items-text">Butter Chicken, Naan + Dal</div><div class="order-total">₹544</div></div>
+              <button class="reorder-btn" onclick="event.stopPropagation();tap();openRestaurant('spice')">Reorder</button>
+            </div>
+          </div>
+          <div class="order-card" onclick="tap();showToast('Loading order details…')">
+            <div class="order-card-head">
+              <div class="order-rest-info">
+                <img class="order-rest-icon" src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=80&h=80&q=80" alt="Burger">
+                <div><h4>BurgerBros</h4><p>Jun 10, 2026 · 2 items</p></div>
+              </div>
+              <span class="order-status cancelled">Cancelled</span>
+            </div>
+            <div class="order-card-body">
+              <div><div class="order-items-text">Smash Burger, Classic Fries</div><div class="order-total">₹397</div></div>
+              <button class="reorder-btn" onclick="event.stopPropagation();tap();openRestaurant('burger')">Reorder</button>
+            </div>
+          </div>
+          <div style="height:20px"></div>
+        </div>
+      </div>
+
+      <!-- SAVED ADDRESSES -->
+      <div class="screen" id="sc-addresses">
+        <div class="sub-screen-inner">
+          <div class="sub-header">
+            <button class="sub-back" onclick="tap();goBack()">‹</button>
+            <h2>Saved Addresses</h2>
+          </div>
+          <div id="addr-list"></div>
+          <button class="add-addr-btn" onclick="openAddNewAddr()">+ Add New Address</button>
+        </div>
+        <!-- overlay -->
+        <div class="sheet-overlay" id="addr-overlay" onclick="closeAddrSheet()"></div>
+        <!-- bottom sheet -->
+        <div class="bottom-sheet" id="addr-sheet">
+          <div class="sheet-handle"></div>
+          <div class="sheet-header">
+            <h3 id="addr-sheet-title">Add Address</h3>
+            <button class="sheet-close" onclick="closeAddrSheet()">✕</button>
+          </div>
+          <div class="sheet-body">
+            <div class="sheet-field">
+              <label>Address Type</label>
+              <div class="type-btns" id="addr-type-btns">
+                <div class="type-btn sel" onclick="selectAddrType(this,'Home')">🏠 Home</div>
+                <div class="type-btn" onclick="selectAddrType(this,'Work')">💼 Work</div>
+                <div class="type-btn" onclick="selectAddrType(this,'College')">🏫 College</div>
+                <div class="type-btn" onclick="selectAddrType(this,'Other')">📌 Other</div>
+              </div>
+            </div>
+            <div class="sheet-field">
+              <label>Street / Flat / Area</label>
+              <input class="sheet-input" id="af-line1" placeholder="e.g. 42, 3rd Cross, Koramangala">
+            </div>
+            <div class="sheet-field">
+              <label>City, State — Pincode</label>
+              <input class="sheet-input" id="af-line2" placeholder="e.g. Bengaluru, Karnataka — 560 095">
+            </div>
+            <input type="hidden" id="af-type" value="Home">
+            <button class="btn-pill btn-primary" style="margin-top:4px" onclick="tap();saveAddr()">Save Address</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAYMENT METHODS -->
+      <div class="screen" id="sc-payments">
+        <div class="sub-screen-inner">
+          <div class="sub-header">
+            <button class="sub-back" onclick="tap();goBack()">‹</button>
+            <h2>Payment Methods</h2>
+          </div>
+          <div class="pay-section-title">UPI</div>
+          <div class="upi-card">
+            <div class="upi-info">
+              <div class="upi-logo">₹</div>
+              <div><h4>Google Pay</h4><p>anaypolineni11@oksbi</p></div>
+            </div>
+            <span style="font-size:10px;font-weight:700;background:#0d3d2e;color:#34d399;padding:4px 8px;border-radius:6px">LINKED</span>
+          </div>
+          <div class="pay-section-title">Credit / Debit Cards</div>
+          <div class="cc-card">
+            <div class="cc-chip"></div>
+            <div class="cc-number">•••• •••• •••• 4821</div>
+            <div class="cc-bottom">
+              <div>
+                <div class="cc-name">POLINENI ANAY</div>
+                <div class="cc-exp">Expires 09 / 28</div>
+              </div>
+              <div class="cc-brand">💳</div>
+            </div>
+          </div>
+          <button class="add-pay-btn" onclick="tap();showToast('Add payment method coming soon!')">+ Add Payment Method</button>
+          <div style="padding:0 14px;margin-top:12px">
+            <div style="background:#1a1a24;border:1px solid #2a2a35;border-radius:14px;padding:14px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="tap();showToast('Cash on delivery selected ✓')">
+              <div style="width:36px;height:36px;background:#2e2a1a;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px">💵</div>
+              <div><div style="font-size:14px;font-weight:600">Cash on Delivery</div><div style="font-size:11px;color:#888;margin-top:1px">Pay when food arrives</div></div>
+              <span style="margin-left:auto;font-size:18px;color:#555">›</span>
+            </div>
+          </div>
+          <div style="height:20px"></div>
+        </div>
+      </div>
+
+      <!-- OFFERS & COUPONS -->
+      <div class="screen" id="sc-offers">
+        <div class="sub-screen-inner">
+          <div class="sub-header">
+            <button class="sub-back" onclick="tap();goBack()">‹</button>
+            <h2>Offers &amp; Coupons</h2>
+          </div>
+          <div class="offer-card">
+            <img class="offer-banner" src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=600&h=160&q=80" alt="offer" loading="lazy">
+            <div class="offer-body">
+              <span class="offer-tag-badge hot">🔥 Hot Deal</span>
+              <h4>50% OFF on First Order</h4>
+              <p>Get up to ₹100 off on your very first order. Valid on all restaurants.</p>
+              <div class="offer-foot">
+                <span class="coupon-code">FRESH50</span>
+                <button class="apply-btn" onclick="tap();showToast('Code FRESH50 applied! 🎉');goBack()">Apply</button>
+              </div>
+              <div class="offer-validity">Valid till: Jun 30, 2026</div>
+            </div>
+          </div>
+          <div class="offer-card">
+            <img class="offer-banner" src="https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?auto=format&fit=crop&w=600&h=160&q=80" alt="offer" loading="lazy">
+            <div class="offer-body">
+              <span class="offer-tag-badge free">🎁 Free Delivery</span>
+              <h4>Free Delivery on Orders ₹299+</h4>
+              <p>Zero delivery charges on orders above ₹299 from any restaurant.</p>
+              <div class="offer-foot">
+                <span class="coupon-code">FREERIDE</span>
+                <button class="apply-btn" onclick="tap();showToast('Free delivery activated! 🛵');goBack()">Apply</button>
+              </div>
+              <div class="offer-validity">Valid till: Jul 15, 2026</div>
+            </div>
+          </div>
+          <div class="offer-card">
+            <img class="offer-banner" src="https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=600&h=160&q=80" alt="offer" loading="lazy">
+            <div class="offer-body">
+              <span class="offer-tag-badge new-badge">✨ New</span>
+              <h4>Buy 1 Get 1 on Biryanis</h4>
+              <p>Order any biryani from Spice Garden and get one free. Limited time!</p>
+              <div class="offer-foot">
+                <span class="coupon-code">BOGO2026</span>
+                <button class="apply-btn" onclick="tap();showToast('BOGO offer applied! 🍛');openRestaurant('spice')">Use Now</button>
+              </div>
+              <div class="offer-validity">Valid till: Jun 22, 2026</div>
+            </div>
+          </div>
+          <div style="height:20px"></div>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="screen" id="sc-settings">
+        <div class="sub-screen-inner" id="settings-scroll">
+          <div class="sub-header">
+            <button class="sub-back" onclick="tap();goBack()">‹</button>
+            <h2>Settings</h2>
+          </div>
+          <div class="setting-group">
+            <div class="setting-group-title">Notifications</div>
+            <div class="setting-row">
+              <div class="setting-row-left"><div class="s-ico" style="background:#1a1f2e">🔔</div><div><h4>Order Updates</h4><p id="s-order-sub">Live status &amp; delivery alerts</p></div></div>
+              <button class="toggle on" id="tog-orderUpdates" onclick="toggleSetting('orderUpdates',this)"></button>
+            </div>
+            <div class="setting-row">
+              <div class="setting-row-left"><div class="s-ico" style="background:#2d1f0a">📢</div><div><h4>Promotions</h4><p id="s-promo-sub">Offers &amp; deals shown on Home</p></div></div>
+              <button class="toggle on" id="tog-promotions" onclick="toggleSetting('promotions',this)"></button>
+            </div>
+            <div class="setting-row">
+              <div class="setting-row-left"><div class="s-ico" style="background:#1a2e1f">💬</div><div><h4>Chat Support</h4><p id="s-chat-sub">Messages from support team</p></div></div>
+              <button class="toggle" id="tog-chat" onclick="toggleSetting('chat',this)"></button>
+            </div>
+          </div>
+          <div class="setting-group">
+            <div class="setting-group-title">Privacy</div>
+            <div class="setting-row">
+              <div class="setting-row-left"><div class="s-ico" style="background:#1a1f2e">📍</div><div><h4>Location Access</h4><p id="s-loc-sub">Used for delivery address</p></div></div>
+              <button class="toggle on" id="tog-location" onclick="toggleSetting('location',this)"></button>
+            </div>
+            <div class="setting-row">
+              <div class="setting-row-left"><div class="s-ico" style="background:#1a2e2e">📊</div><div><h4>Analytics Sharing</h4><p id="s-analytics-sub">Session log visible in panel</p></div></div>
+              <button class="toggle on" id="tog-analytics" onclick="toggleSetting('analytics',this)"></button>
+            </div>
+          </div>
+          <div class="setting-group">
+            <div class="setting-group-title">Appearance</div>
+            <div class="setting-row">
+              <div class="setting-row-left"><div class="s-ico" style="background:#1a1224">🌙</div><div><h4>Dark Mode</h4><p id="s-dark-sub">Dark UI active</p></div></div>
+              <button class="toggle on" id="tog-darkMode" onclick="toggleSetting('darkMode',this)"></button>
+            </div>
+            <div class="setting-row" onclick="tap();goScreen('language')">
+              <div class="setting-row-left"><div class="s-ico" style="background:#1a1818">🌐</div><div><h4>Language</h4><p id="s-lang-sub">English</p></div></div>
+              <span class="setting-arrow">›</span>
+            </div>
+          </div>
+          <div class="setting-group">
+            <div class="setting-group-title">About</div>
+            <div class="setting-row" onclick="tap();showAboutSheet()">
+              <div class="setting-row-left"><div class="s-ico" style="background:#1a1818">ℹ️</div><div><h4>App Version</h4><p>v3.0.0 (Prototype)</p></div></div>
+              <span class="setting-arrow">›</span>
+            </div>
+            <div class="setting-row" onclick="tap();showTermsSheet()">
+              <div class="setting-row-left"><div class="s-ico" style="background:#1a1f2e">📄</div><div><h4>Terms of Service</h4><p>Read our terms</p></div></div>
+              <span class="setting-arrow">›</span>
+            </div>
+            <div class="setting-row" onclick="tap();showToast('Clearing cache… Done ✓')">
+              <div class="setting-row-left"><div class="s-ico" style="background:#2e2a1a">🗑️</div><div><h4>Clear Cache</h4><p>Free up storage space</p></div></div>
+              <span class="setting-arrow">›</span>
+            </div>
+          </div>
+          <button class="danger-btn" onclick="tap();doSignOut()">🚪 Sign Out of FoodRush</button>
+          <button class="danger-btn" style="margin-top:8px;border-color:#ef444460;color:#ef4444" onclick="tap();openDeleteSheet()">🗑️ Delete Account</button>
+          <div style="height:20px"></div>
+        </div>
+        <!-- Delete account confirmation sheet -->
+        <div class="sheet-overlay" id="del-overlay" onclick="closeDeleteSheet()"></div>
+        <div class="bottom-sheet" id="del-sheet">
+          <div class="sheet-handle"></div>
+          <div class="sheet-header">
+            <h3 style="color:#ef4444">⚠️ Delete Account</h3>
+            <button class="sheet-close" onclick="closeDeleteSheet()">✕</button>
+          </div>
+          <div class="sheet-body">
+            <div style="background:#1a0a0a;border:1px solid #3d0d0d;border-radius:12px;padding:14px;margin-bottom:16px">
+              <p style="font-size:13px;color:#f87171;line-height:1.7">This will <strong>permanently delete</strong> your account, all saved addresses, and order history. This action <strong>cannot be undone.</strong></p>
+            </div>
+            <div class="sheet-field">
+              <label>Type your email to confirm</label>
+              <input class="sheet-input" id="del-confirm-email" type="email" placeholder="your@email.com" style="border-color:#3d0d0d">
+              <div class="err-msg" id="del-email-err" style="color:#f87171">Email doesn't match your account</div>
+            </div>
+            <button class="btn-pill" style="background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;padding:14px;border-radius:14px;font-size:15px;font-weight:800;width:100%;border:none;cursor:pointer;margin-top:4px" onclick="tap();doDeleteAccount()">Delete My Account Forever</button>
+            <button class="btn-pill btn-secondary" style="margin-top:10px" onclick="tap();closeDeleteSheet()">Cancel, Keep Account</button>
+          </div>
+        </div>
+        <!-- About bottom sheet -->
+        <div class="sheet-overlay" id="about-overlay" onclick="closeAboutSheet()"></div>
+        <div class="bottom-sheet" id="about-sheet">
+          <div class="sheet-handle"></div>
+          <div class="sheet-header"><h3>About FoodRush</h3><button class="sheet-close" onclick="closeAboutSheet()">✕</button></div>
+          <div class="sheet-body" style="text-align:center;padding:20px">
+            <div style="width:64px;height:64px;background:linear-gradient(135deg,#ff6b35,#f7c59f);border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 16px">🍜</div>
+            <div style="font-size:20px;font-weight:800;margin-bottom:4px">FoodRush</div>
+            <div style="font-size:13px;color:#888;margin-bottom:16px">Version 3.0.0 — Prototype Build</div>
+            <div style="background:#22222e;border-radius:12px;padding:14px;text-align:left;font-size:12px;color:#888;line-height:1.8">
+              <div>📅 Build Date: Jun 18, 2026</div>
+              <div>👨‍💻 Built for: Internship Project</div>
+              <div>🎯 Purpose: Interactive Prototype</div>
+              <div>⚡ Framework: Vanilla HTML/CSS/JS</div>
+            </div>
+            <div style="margin-top:14px;font-size:11px;color:#555">Made with ❤️ — FoodRush Team</div>
+          </div>
+        </div>
+        <!-- Terms bottom sheet -->
+        <div class="sheet-overlay" id="terms-overlay" onclick="closeTermsSheet()"></div>
+        <div class="bottom-sheet" id="terms-sheet">
+          <div class="sheet-handle"></div>
+          <div class="sheet-header"><h3>Terms of Service</h3><button class="sheet-close" onclick="closeTermsSheet()">✕</button></div>
+          <div class="sheet-body" style="font-size:12px;color:#aaa;line-height:1.8;max-height:300px;overflow-y:auto">
+            <p style="font-weight:700;color:#fff;margin-bottom:8px">1. Acceptance of Terms</p>
+            <p style="margin-bottom:12px">By using FoodRush, you agree to these terms. If you disagree, please stop using the app immediately.</p>
+            <p style="font-weight:700;color:#fff;margin-bottom:8px">2. Orders &amp; Payments</p>
+            <p style="margin-bottom:12px">All orders are subject to restaurant availability. Payments are processed securely via our payment partners.</p>
+            <p style="font-weight:700;color:#fff;margin-bottom:8px">3. Delivery Policy</p>
+            <p style="margin-bottom:12px">Delivery times are estimates. FoodRush is not liable for delays beyond our control.</p>
+            <p style="font-weight:700;color:#fff;margin-bottom:8px">4. Privacy</p>
+            <p style="margin-bottom:12px">We collect location data for delivery purposes only. See our Privacy Policy for full details.</p>
+            <p style="font-size:10px;color:#555;margin-top:16px">Last updated: Jun 18, 2026</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- LANGUAGE -->
+      <div class="screen" id="sc-language">
+        <div class="sub-screen-inner">
+          <div class="sub-header">
+            <button class="sub-back" onclick="tap();goBack()">‹</button>
+            <h2>Language</h2>
+          </div>
+          <div style="padding:8px 0" id="lang-list"></div>
+        </div>
+      </div>
+
+    </div><!-- /device -->
+    <div class="device-ctrl">
+      <button class="ctrl-btn" onclick="tap();goBack()">‹ Back</button>
+      <button class="ctrl-btn" onclick="tap();switchTab('home')">🏠 Home</button>
+      <button class="ctrl-btn" onclick="tap();switchTab('cart')">🛒 Cart</button>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+</main>
+
+<!-- RIGHT PANEL -->
+<aside class="rpanel">
+  <h3>Test Cases</h3>
+  <div class="test-row" onclick="tap();cycleTest(this)"><span class="test-name">Splash loads</span><span class="test-status pass">PASS</span></div>
+  <div class="test-row" onclick="tap();cycleTest(this)"><span class="test-name">Auth flow</span><span class="test-status pass">PASS</span></div>
+  <div class="test-row" onclick="tap();cycleTest(this)"><span class="test-name">Restaurant nav</span><span class="test-status pass">PASS</span></div>
+  <div class="test-row" onclick="tap();cycleTest(this)"><span class="test-name">Cart + GST calc</span><span class="test-status pass">PASS</span></div>
+  <div class="test-row" onclick="tap();cycleTest(this)"><span class="test-name">Order flow</span><span class="test-status skip">SKIP</span></div>
+  <div class="test-row" onclick="tap();cycleTest(this)"><span class="test-name">Back navigation</span><span class="test-status pass">PASS</span></div>
+  <div class="divider"></div>
+  <h3>Feedback</h3>
+  <div class="stars" id="stars">
+    <span class="star" onclick="setStar(1)">★</span>
+    <span class="star" onclick="setStar(2)">★</span>
+    <span class="star" onclick="setStar(3)">★</span>
+    <span class="star" onclick="setStar(4)">★</span>
+    <span class="star" onclick="setStar(5)">★</span>
+  </div>
+  <div class="fb-tags">
+    <div class="fb-tag" onclick="this.classList.toggle('sel')">Design</div>
+    <div class="fb-tag" onclick="this.classList.toggle('sel')">Navigation</div>
+    <div class="fb-tag" onclick="this.classList.toggle('sel')">Flow</div>
+    <div class="fb-tag" onclick="this.classList.toggle('sel')">Animations</div>
+    <div class="fb-tag" onclick="this.classList.toggle('sel')">Cart UX</div>
+  </div>
+  <textarea class="fb-ta" id="fb-text" rows="3" placeholder="Share your thoughts…"></textarea>
+  <button class="btn-full btn-submit" onclick="submitFB()">Submit Feedback</button>
+  <div id="session-log-wrap">
+    <div class="divider"></div>
+    <h3>Session Log</h3>
+    <div id="session-log" style="font-size:11px;color:#666;line-height:2;max-height:180px;overflow-y:auto"></div>
+  </div>
+</aside>
+
+</div><!-- /shell -->
+
+<script>
+const RESTAURANTS = [
+  {
+    id:'bella', name:'Bella Italia', cuisine:'Italian · Pizza · Pasta',
+    rating:4.8, ratingCount:'2.3k', time:'22 min', priceTwo:'₹400 for two', offer:'50% OFF up to ₹100',
+    img:'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=600&h=280&q=80',
+    dishes:[
+      {id:'mp',name:'Margherita Pizza',price:249,img:'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=200&h=150&q=80',desc:'Classic tomato base, fresh mozzarella, basil',cat:'Pizza',best:true,veg:true},
+      {id:'pp',name:'Pepperoni Pizza',price:319,img:'https://images.unsplash.com/photo-1628840042765-356cda07504e?auto=format&fit=crop&w=200&h=150&q=80',desc:'Double pepperoni, jalapeños, mozzarella',cat:'Pizza'},
+      {id:'tt',name:'Truffle Tagliatelle',price:399,img:'https://images.unsplash.com/photo-1555949258-eb67b1ef0ceb?auto=format&fit=crop&w=200&h=150&q=80',desc:'Black truffle, fresh egg pasta, aged parmesan',cat:'Pasta',isNew:true},
+      {id:'ti',name:'Tiramisu',price:149,img:'https://images.unsplash.com/photo-1551024506-0bccd828d307?auto=format&fit=crop&w=200&h=150&q=80',desc:'Italian coffee dessert, mascarpone cream',cat:'Desserts',veg:true}
+    ]
+  },
+  {
+    id:'tokyo', name:'Tokyo House', cuisine:'Japanese · Sushi · Ramen',
+    rating:4.9, ratingCount:'1.8k', time:'30 min', priceTwo:'₹600 for two', offer:'Free miso on orders ₹499+',
+    img:'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?auto=format&fit=crop&w=600&h=280&q=80',
+    dishes:[
+      {id:'sr',name:'Salmon Sushi Roll (8pc)',price:349,img:'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=200&h=150&q=80',desc:'Fresh Atlantic salmon, avocado, cucumber',cat:'Sushi',best:true},
+      {id:'dr',name:'Dragon Roll (8pc)',price:399,img:'https://images.unsplash.com/photo-1617196034183-421b4040ed20?auto=format&fit=crop&w=200&h=150&q=80',desc:'Shrimp tempura, avocado, eel sauce',cat:'Sushi',isNew:true},
+      {id:'tr',name:'Tonkotsu Ramen',price:319,img:'https://images.unsplash.com/photo-1569050467447-ce54b3bbc37d?auto=format&fit=crop&w=200&h=150&q=80',desc:'Rich pork bone broth, chashu, soft egg',cat:'Ramen'},
+      {id:'gi',name:'Gyoza (6pc)',price:199,img:'https://images.unsplash.com/photo-1498654896293-37aacf113fd9?auto=format&fit=crop&w=200&h=150&q=80',desc:'Pan-fried pork dumplings, ponzu sauce',cat:'Starters'}
+    ]
+  },
+  {
+    id:'spice', name:'Spice Garden', cuisine:'North Indian · Biryani · Curries',
+    rating:4.7, ratingCount:'3.1k', time:'25 min', priceTwo:'₹350 for two', offer:'Buy 1 Get 1 on biryanis',
+    img:'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=600&h=280&q=80',
+    dishes:[
+      {id:'bc',name:'Butter Chicken',price:289,img:'https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=200&h=150&q=80',desc:'Creamy tomato gravy, tender chicken tikka',cat:'Curries',best:true},
+      {id:'cb',name:'Chicken Biryani',price:319,img:'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=200&h=150&q=80',desc:'Aged basmati, whole spices, saffron, raita',cat:'Biryani',best:true},
+      {id:'vb',name:'Veg Biryani',price:249,img:'https://images.unsplash.com/photo-1574653853027-5382a3d23a15?auto=format&fit=crop&w=200&h=150&q=80',desc:'Garden vegetables, mint, dum-cooked basmati',cat:'Biryani',veg:true},
+      {id:'nd',name:'Naan + Dal Makhani',price:199,img:'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=200&h=150&q=80',desc:'Tandoor naan with rich overnight dal',cat:'Breads',veg:true,best:true}
+    ]
+  },
+  {
+    id:'bowl', name:'The Bowl Co.', cuisine:'Healthy · Salads · Bowls',
+    rating:4.6, ratingCount:'950', time:'18 min', priceTwo:'₹250 for two', offer:'Free protein add-on today',
+    img:'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=600&h=280&q=80',
+    dishes:[
+      {id:'ab',name:'Tropical Acai Bowl',price:199,img:'https://images.unsplash.com/photo-1493770348161-369560ae357d?auto=format&fit=crop&w=200&h=150&q=80',desc:'Acai, granola, fresh mango, banana, coconut',cat:'Bowls',best:true,veg:true},
+      {id:'qb',name:'Quinoa Power Bowl',price:229,img:'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=200&h=150&q=80',desc:'Tri-color quinoa, roasted veggies, tahini',cat:'Bowls',veg:true,isNew:true},
+      {id:'cs',name:'Caesar Salad',price:179,img:'https://images.unsplash.com/photo-1550304943-4f24f54ddde9?auto=format&fit=crop&w=200&h=150&q=80',desc:'Crisp romaine, parmesan, croutons, caesar',cat:'Salads'},
+      {id:'sm',name:'Strawberry Smoothie',price:129,img:'https://images.unsplash.com/photo-1502741224143-90386d7f8c82?auto=format&fit=crop&w=200&h=150&q=80',desc:'Fresh strawberry, banana, almond milk',cat:'Drinks',veg:true}
+    ]
+  },
+  {
+    id:'burger', name:'BurgerBros', cuisine:'American · Burgers · Fries',
+    rating:4.5, ratingCount:'1.4k', time:'20 min', priceTwo:'₹300 for two', offer:'Combos from ₹249',
+    img:'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=600&h=280&q=80',
+    dishes:[
+      {id:'sb',name:'Smash Burger',price:249,img:'https://images.unsplash.com/photo-1553979459-d2229ba7433b?auto=format&fit=crop&w=200&h=150&q=80',desc:'Double smash patty, American cheese, sauce',cat:'Burgers',best:true},
+      {id:'mb',name:'Mushroom Swiss Burger',price:279,img:'https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?auto=format&fit=crop&w=200&h=150&q=80',desc:'Sautéed mushrooms, Swiss cheese, truffle mayo',cat:'Burgers'},
+      {id:'cf',name:'Classic Fries',price:99,img:'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?auto=format&fit=crop&w=200&h=150&q=80',desc:'Hand-cut golden fries, seasoning salt',cat:'Sides',veg:true},
+      {id:'cs2',name:'Classic Shake',price:149,img:'https://images.unsplash.com/photo-1572490122747-3968b75cc699?auto=format&fit=crop&w=200&h=150&q=80',desc:'Real dairy, thick creamy vanilla shake',cat:'Drinks'}
+    ]
+  }
+];
+
+let cart = [];
+let screenStack = ['splash'];
+let currentScreen = 'splash';
+let tapCount = 0;
+let fbCount = 0;
+let currentUser = null;
+let screenCount = 1;
+let currentRating = 0;
+let feedbacks = [];
+
+function goScreen(name) {
+  if (currentScreen === name) return;
+  const prev = document.getElementById('sc-' + currentScreen);
+  const next = document.getElementById('sc-' + name);
+  if (!next) return;
+  if (prev) prev.classList.remove('active');
+  next.classList.add('active');
+  if (screenStack[screenStack.length - 1] !== name) screenStack.push(name);
+  currentScreen = name;
+  screenCount++;
+  document.getElementById('st-screens').textContent = screenCount;
+  document.getElementById('cur-screen').textContent = name.charAt(0).toUpperCase() + name.slice(1);
+  updateFlowSteps(name);
+  logAction('→ ' + name);
+  if (name === 'cart') renderCart();
+  if (name === 'home') renderHomeRestaurants();
+  if (name === 'explore') renderExplore();
+}
+
+function goBack() {
+  if (screenStack.length > 1) {
+    screenStack.pop();
+    const prev = screenStack[screenStack.length - 1];
+    const curr = document.getElementById('sc-' + currentScreen);
+    const prevEl = document.getElementById('sc-' + prev);
+    if (curr) curr.classList.remove('active');
+    if (prevEl) prevEl.classList.add('active');
+    currentScreen = prev;
+    document.getElementById('cur-screen').textContent = prev.charAt(0).toUpperCase() + prev.slice(1);
+    updateFlowSteps(prev);
+    logAction('← back to ' + prev);
+    if (prev === 'cart') renderCart();
+  }
+}
+
+function switchTab(tab) {
+  // clear ALL screens, then show the target tab
+  document.querySelectorAll('[id^="sc-"]').forEach(s => s.classList.remove('active'));
+  const target = document.getElementById('sc-' + tab);
+  if (target) target.classList.add('active');
+  if (screenStack[screenStack.length-1] !== tab) screenStack.push(tab);
+  currentScreen = tab;
+  screenCount++;
+  document.getElementById('st-screens').textContent = screenCount;
+  document.getElementById('cur-screen').textContent = tab.charAt(0).toUpperCase() + tab.slice(1);
+  updateFlowSteps(tab);
+  logAction('tab → ' + tab);
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.nav === tab));
+  if (tab === 'home') renderHomeRestaurants();
+  if (tab === 'explore') renderExplore();
+  if (tab === 'cart') renderCart();
+}
+
+function skipToHome() {
+  currentUser = { name:'Foodie', email:'guest@foodrush.app' };
+  updateProfileUI();
+  goScreen('home');
+}
+
+function updateFlowSteps(name) {
+  const map = {splash:'fs-splash',signin:'fs-auth',signup:'fs-auth',verify:'fs-auth',home:'fs-home',explore:'fs-home',profile:'fs-home',restaurant:'fs-rest',cart:'fs-cart',success:'fs-success'};
+  const active = map[name];
+  ['fs-splash','fs-auth','fs-home','fs-rest','fs-cart','fs-success'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const dot = el.querySelector('.dot');
+    if (id === active) {
+      el.classList.add('active');
+      dot.className = 'dot act';
+      dot.textContent = dot.textContent === '✓' ? '✓' : ['fs-splash','fs-auth','fs-home','fs-rest','fs-cart','fs-success'].indexOf(id)+1+'';
+    } else {
+      el.classList.remove('active');
+    }
+  });
+}
+
+// ── USER DATABASE (localStorage) ──────────────────
+function getDB() {
+  try { return JSON.parse(localStorage.getItem('fr_users') || '[]'); } catch { return []; }
+}
+function saveDB(db) {
+  localStorage.setItem('fr_users', JSON.stringify(db));
+}
+function dbFind(email) {
+  return getDB().find(u => u.email.toLowerCase() === email.toLowerCase());
+}
+
+// clear all signin errors
+function clearSIErrors() {
+  ['si-email-err','si-noact-err','si-unver-err','si-pass-err','si-wrongpass-err'].forEach(hide);
+}
+
+function doSignIn() {
+  clearSIErrors();
+  const email = document.getElementById('si-email').value.trim();
+  const pass  = document.getElementById('si-pass').value;
+  let ok = true;
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { show('si-email-err'); ok = false; }
+  if (pass.length < 6) { show('si-pass-err'); ok = false; }
+  if (!ok) return;
+
+  const user = dbFind(email);
+  if (!user) { show('si-noact-err'); return; }
+  if (!user.verified) { show('si-unver-err'); return; }
+  if (user.password !== pass) { show('si-wrongpass-err'); return; }
+
+  currentUser = { name: user.name, email: user.email };
+  updateProfileUI();
+  document.getElementById('cur-login').textContent = 'Yes';
+  showToast('Welcome back, ' + user.name.split(' ')[0] + '! 👋');
+  logAction('Signed in: ' + email);
+  goScreen('home');
+}
+
+// pending signup — stored until email verified
+let pendingSignup = null;
+
+function doSignUp() {
+  ['su-name-err','su-email-err','su-exists-err','su-pass-err','su-cpass-err'].forEach(hide);
+  const name  = document.getElementById('su-name').value.trim();
+  const email = document.getElementById('su-email').value.trim();
+  const pass  = document.getElementById('su-pass').value;
+  const cpass = document.getElementById('su-cpass').value;
+  let ok = true;
+
+  if (!name)  { show('su-name-err'); ok = false; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { show('su-email-err'); ok = false; }
+  if (pass.length < 6)   { show('su-pass-err'); ok = false; }
+  if (pass !== cpass)    { show('su-cpass-err'); ok = false; }
+  if (!ok) return;
+
+  if (dbFind(email)) { show('su-exists-err'); return; }
+
+  pendingSignup = { name, email, password: pass, verified: false };
+  document.getElementById('verify-email-txt').textContent = email;
+  logAction('Sign up pending: ' + email);
+  goScreen('verify');
+}
+
+function sendVerifyEmail() {
+  const u = pendingSignup;
+  if (u) {
+    window.open('mailto:' + u.email + '?subject=Verify your FoodRush account&body=Hi ' + u.name + ',%0A%0AClick to verify:%0Ahttps://foodrush.app/verify?token=sim_' + Date.now() + '%0A%0ATeam FoodRush 🍜', '_blank');
+  }
+  showToast('Verification email sent 📧');
+  logAction('Verification email sent');
+}
+
+function confirmVerified() {
+  if (!pendingSignup) { showToast('Nothing to verify'); return; }
+  // Save verified account to DB
+  const db = getDB();
+  pendingSignup.verified = true;
+  db.push(pendingSignup);
+  saveDB(db);
+  currentUser = { name: pendingSignup.name, email: pendingSignup.email };
+  pendingSignup = null;
+  updateProfileUI();
+  document.getElementById('cur-login').textContent = 'Yes';
+  showToast('Email verified! Welcome 🎉');
+  logAction('Account created & verified: ' + currentUser.email);
+  goScreen('home');
+}
+
+function doSignOut() {
+  currentUser = null;
+  cart = [];
+  updateCartBadges();
+  document.getElementById('cur-login').textContent = 'No';
+  document.getElementById('st-cart').textContent = '0';
+  document.getElementById('cur-items').textContent = '0';
+  document.getElementById('cur-total').textContent = '₹0';
+  showToast('Signed out. See you soon!');
+  logAction('Signed out');
+  screenStack = ['splash'];
+  goScreen('splash');
+}
+
+function show(id) { document.getElementById(id).style.display = 'block'; }
+function hide(id) { document.getElementById(id).style.display = 'none'; }
+
+function updateProfileUI() {
+  if (!currentUser) return;
+  const cap = currentUser.name.split(' ').map(w => w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+  document.getElementById('user-name-disp').textContent = cap.split(' ')[0];
+  document.getElementById('p-name').textContent = cap;
+  document.getElementById('p-email').textContent = currentUser.email;
+}
+
+function openRestaurant(restId) {
+  tap();
+  const r = RESTAURANTS.find(x => x.id === restId);
+  if (!r) return;
+  const cats = {};
+  r.dishes.forEach(d => { if (!cats[d.cat]) cats[d.cat]=[]; cats[d.cat].push(d); });
+  let dishHTML = '';
+  Object.entries(cats).forEach(([cat, dishes]) => {
+    dishHTML += `<div class="menu-cat-label">${cat}</div>`;
+    dishes.forEach(d => {
+      const tags = [d.veg?'<span class="tag-veg">VEG</span>':'',d.best?'<span class="tag-best">BESTSELLER</span>':'',d.isNew?'<span class="tag-new">NEW</span>':''].filter(Boolean).join('');
+      dishHTML += `<div class="dish-row">
+        <img class="dish-img" src="${d.img}" alt="${d.name}" loading="lazy">
+        <div class="dish-text">
+          ${tags?`<div class="dish-tags">${tags}</div>`:''}
+          <h4>${d.name}</h4>
+          ${d.desc?`<p>${d.desc}</p>`:''}
+          <span class="price">₹${d.price}</span>
+        </div>
+        <button class="add-btn" onclick="event.stopPropagation();tap();addCart('${r.id}','${r.name}','${d.id}','${d.name.replace(/'/g,"\\'")}',${d.price},'${d.img}')">ADD +</button>
+      </div>`;
+    });
+  });
+
+  document.getElementById('rest-sb').innerHTML = `
+    <div style="position:relative">
+      <button class="back-btn" onclick="tap();goBack()" style="top:10px;left:10px">‹</button>
+      <img class="rest-hero" src="${r.img}" alt="${r.name}" loading="lazy">
+      <div class="rest-hero-overlay">
+        <h2>${r.name}</h2>
+        <p>${r.cuisine}</p>
+        <div class="rest-hero-meta">
+          <span class="chip">⭐ ${r.rating} (${r.ratingCount})</span>
+          <span class="chip">🕒 ${r.time}</span>
+          <span class="chip">💰 ${r.priceTwo}</span>
+        </div>
+      </div>
+    </div>
+    <div class="menu-section" style="padding-bottom:80px">
+      ${r.offer?`<div style="background:#1a1f2e;border:1px solid #3b4b6e;color:#60a5fa;font-size:12px;font-weight:700;padding:10px 14px;border-radius:12px;margin:10px 0;display:flex;align-items:center;gap:8px">🏷️ ${r.offer}</div>`:''}
+      ${dishHTML}
+    </div>`;
+
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.nav === 'explore'));
+  if (screenStack[screenStack.length-1] !== 'restaurant') screenStack.push('restaurant');
+  const prev = document.getElementById('sc-' + currentScreen);
+  if (prev) prev.classList.remove('active');
+  document.getElementById('sc-restaurant').classList.add('active');
+  currentScreen = 'restaurant';
+  screenCount++;
+  document.getElementById('st-screens').textContent = screenCount;
+  document.getElementById('cur-screen').textContent = r.name;
+  logAction('Opened: ' + r.name);
+}
+
+function addCart(restId, restName, dishId, dishName, price, img) {
+  const key = restId + '_' + dishId;
+  const existing = cart.find(c => c.key === key);
+  if (existing) { existing.qty++; showToast('One more ' + dishName + ' added 🛒'); }
+  else { cart.push({key, restId, restName, dishId, name:dishName, p:price, img, qty:1}); showToast(dishName + ' added to cart 🛒'); }
+  const total = cart.reduce((a,c)=>a+c.qty,0);
+  updateCartBadges();
+  document.getElementById('st-cart').textContent = total;
+  document.getElementById('cur-items').textContent = total;
+  logAction('Cart +' + dishName);
+}
+
+function changeQty(key, delta) {
+  const item = cart.find(c => c.key === key);
+  if (!item) return;
+  item.qty += delta;
+  if (item.qty <= 0) cart = cart.filter(c => c.key !== key);
+  const total = cart.reduce((a,c)=>a+c.qty,0);
+  updateCartBadges();
+  document.getElementById('st-cart').textContent = total;
+  document.getElementById('cur-items').textContent = total;
+  renderCart();
+}
+
+function renderCart() {
+  const body = document.getElementById('cart-body');
+  if (!body) return;
+  const totalQty = cart.reduce((a,c)=>a+c.qty,0);
+  if (cart.length === 0) {
+    document.getElementById('cur-total').textContent = '₹0';
+    body.innerHTML = `
+      <div class="cart-header"><h2>Your Cart</h2></div>
+      <div class="cart-empty">
+        <div class="empty-icon">🛒</div>
+        <h3>Cart is empty</h3>
+        <p>Add items from a restaurant to get started</p>
+        <button class="btn-pill btn-primary" style="margin-top:16px;width:100%" onclick="tap();switchTab('home')">Browse Restaurants</button>
+      </div>`;
+    return;
+  }
+  const subtotal = cart.reduce((a,c)=>a+c.p*c.qty,0);
+  const delivery = 49, platform = 5;
+  const gst = Math.round(subtotal * 0.05);
+  const total = subtotal + delivery + platform + gst;
+  document.getElementById('cur-total').textContent = '₹' + total;
+  const savings = Math.round(subtotal * 0.1);
+  let itemsHTML = cart.map(item=>`
+    <div class="cart-item">
+      <img class="cart-item-img" src="${item.img}" alt="${item.name}" loading="lazy">
+      <div class="cart-item-info">
+        <h4>${item.name}</h4>
+        <div class="item-rest">${item.restName}</div>
+        <div class="qty-ctrl">
+          <button class="qty-btn" onclick="tap();changeQty('${item.key}',-1)">−</button>
+          <span class="qty-num">${item.qty}</span>
+          <button class="qty-btn" onclick="tap();changeQty('${item.key}',1)">+</button>
+        </div>
+      </div>
+      <div class="cart-item-price">₹${item.p*item.qty}</div>
+    </div>`).join('');
+
+  body.innerHTML = `
+    <div class="cart-header"><h2>Your Cart</h2><span style="font-size:12px;color:#888;margin-left:auto">${totalQty} item${totalQty>1?'s':''}</span></div>
+    <div class="cart-items">${itemsHTML}</div>
+    <div class="price-breakdown">
+      <h3>Bill Details</h3>
+      <div class="price-row"><span>Item Total</span><span>₹${subtotal}</span></div>
+      <div class="price-row"><span>Delivery Fee</span><span>₹${delivery}</span></div>
+      <div class="price-row"><span>Platform Fee</span><span>₹${platform}</span></div>
+      <div class="price-row"><span>GST &amp; Taxes (5%)</span><span>₹${gst}</span></div>
+      <div class="price-row total"><span>Grand Total</span><span>₹${total}</span></div>
+      <div class="price-row savings"><span>🎉 You save ₹${savings} on this order</span><span></span></div>
+    </div>
+    <div style="height:80px"></div>
+    <div class="cart-cta">
+      <button class="btn-place" onclick="tap();placeOrder()">Place Order · ₹${total}</button>
+    </div>`;
+}
+
+function updateCartBadges() {
+  const count = cart.reduce((a,c)=>a+c.qty,0);
+  const txt = String(count);
+  ['cart-badge','cart-badge2','cart-badge3','cart-badge4','cart-badge5'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = txt;
+    el.classList.toggle('show', count > 0);
+  });
+}
+
+function placeOrder() {
+  const num = '#FR' + Math.floor(100000 + Math.random()*900000);
+  document.getElementById('order-num').textContent = num;
+  cart = [];
+  updateCartBadges();
+  document.getElementById('st-cart').textContent = '0';
+  document.getElementById('cur-items').textContent = '0';
+  document.getElementById('cur-total').textContent = '₹0';
+  showToast('Order placed! 🎉');
+  logAction('Order: ' + num);
+  goScreen('success');
+}
+
+function renderHomeRestaurants() {
+  const c = document.getElementById('home-rest-cards');
+  if (!c) return;
+  c.innerHTML = RESTAURANTS.slice(0,4).map(r=>`
+    <div class="rest-card" onclick="openRestaurant('${r.id}')">
+      <img class="rest-img" src="${r.img}" alt="${r.name}" loading="lazy">
+      <div class="rest-info">
+        <h3>${r.name}</h3>
+        <p class="cuisine">${r.cuisine}</p>
+        <div class="rest-meta">
+          <span class="meta-chip rating">⭐ ${r.rating}</span>
+          <span class="meta-dot">•</span>
+          <span class="meta-text">🕒 ${r.time}</span>
+          <span class="meta-dot">•</span>
+          <span class="meta-text">${r.priceTwo}</span>
+        </div>
+        ${r.offer?`<div class="offer-tag">🏷️ ${r.offer}</div>`:''}
+      </div>
+    </div>`).join('');
+}
+
+function renderExplore() {
+  const g = document.getElementById('explore-grid');
+  if (!g) return;
+  g.innerHTML = RESTAURANTS.map(r=>`
+    <div class="mini-rest-card" onclick="openRestaurant('${r.id}')">
+      <img src="${r.img}" alt="${r.name}" loading="lazy">
+      <div class="mini-rest-info">
+        <h4>${r.name}</h4>
+        <p>${r.cuisine}</p>
+        <div class="mini-meta"><span class="mini-rating">⭐ ${r.rating}</span><span>${r.time}</span></div>
+      </div>
+    </div>`).join('');
+}
+
+function setFilter(el) {
+  document.querySelectorAll('#filter-row .filter-chip').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+function tap() {
+  tapCount++;
+  document.getElementById('st-taps').textContent = tapCount;
+}
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+function logAction(msg) {
+  const log = document.getElementById('session-log');
+  const now = new Date().toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  log.innerHTML = `<div>${now} — ${msg}</div>` + log.innerHTML;
+}
+
+function setStar(n) {
+  currentRating = n;
+  document.querySelectorAll('.star').forEach((s,i)=>s.classList.toggle('lit',i<n));
+}
+
+function submitFB() {
+  const text = document.getElementById('fb-text').value.trim();
+  const tags = [...document.querySelectorAll('.fb-tag.sel')].map(t=>t.textContent);
+  if (!currentRating && !text) { showToast('Add a rating or comment first'); return; }
+  feedbacks.push({rating:currentRating,tags,text,screen:currentScreen,time:new Date().toISOString()});
+  fbCount++;
+  document.getElementById('st-fb').textContent = fbCount;
+  document.getElementById('fb-text').value = '';
+  setStar(0);
+  document.querySelectorAll('.fb-tag').forEach(t=>t.classList.remove('sel'));
+  showToast('Feedback recorded! Thanks 🙏');
+  logAction('Feedback: ' + currentRating + '★ — ' + (text||tags.join(',')));
+}
+
+function exportFeedback() {
+  const data = {exported:new Date().toISOString(),prototype:'FoodRush v3',totalTaps:tapCount,totalFeedbacks:fbCount,feedbacks};
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'foodrush-feedback.json';
+  a.click();
+  showToast('Exported feedback.json ✓');
+  logAction('Exported feedback');
+}
+
+function cycleTest(row) {
+  const s = row.querySelector('.test-status');
+  const cur = ['pass','fail','skip'].find(c=>s.classList.contains(c));
+  const next = cur==='pass'?'fail':cur==='fail'?'skip':'pass';
+  s.className = 'test-status '+next;
+  s.textContent = next.toUpperCase();
+  logAction('Test: '+row.querySelector('.test-name').textContent+' → '+next);
+}
+
+function resetProto() {
+  cart=[]; currentUser=null; tapCount=0; fbCount=0; screenCount=1; feedbacks=[]; currentRating=0;
+  screenStack=['splash']; currentScreen='splash';
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('sc-splash').classList.add('active');
+  updateCartBadges();
+  ['st-taps','st-screens','st-cart','st-fb'].forEach(id=>document.getElementById(id).textContent=id==='st-screens'?'1':'0');
+  document.getElementById('cur-screen').textContent='Splash';
+  document.getElementById('cur-total').textContent='₹0';
+  document.getElementById('cur-items').textContent='0';
+  document.getElementById('cur-login').textContent='No';
+  document.getElementById('session-log').innerHTML='';
+  setStar(0);
+  showToast('Prototype reset ↺');
+  logAction('Reset');
+}
+
+// ─────────────────────────────────────────
+//  SETTINGS STATE
+// ─────────────────────────────────────────
+const settings = {
+  orderUpdates: true,
+  promotions: true,
+  chat: false,
+  location: true,
+  analytics: true,
+  darkMode: true
+};
+
+function toggleSetting(key, el) {
+  settings[key] = !settings[key];
+  el.classList.toggle('on', settings[key]);
+  applySettingEffect(key);
+  logAction('Setting [' + key + '] → ' + (settings[key] ? 'ON' : 'OFF'));
+}
+
+function applySettingEffect(key) {
+  const val = settings[key];
+  switch (key) {
+    case 'orderUpdates': {
+      // Show/hide live notification bar on home screen
+      const bar = document.getElementById('notif-bar');
+      if (bar) bar.classList.toggle('show', val);
+      // Update subtitle
+      const sub = document.getElementById('s-order-sub');
+      if (sub) sub.textContent = val ? 'Live status & delivery alerts' : 'Notifications disabled';
+      showToast(val ? '🔔 Order alerts enabled' : '🔕 Order alerts disabled');
+      break;
+    }
+    case 'promotions': {
+      // Hide/show the offers banners section on home
+      const offSec = document.getElementById('home-offers-section');
+      if (offSec) offSec.style.display = val ? '' : 'none';
+      const sub = document.getElementById('s-promo-sub');
+      if (sub) sub.textContent = val ? 'Offers & deals shown on Home' : 'Offers hidden from Home';
+      showToast(val ? '📢 Promotions visible on Home' : '🚫 Promotions hidden from Home');
+      break;
+    }
+    case 'chat': {
+      const sub = document.getElementById('s-chat-sub');
+      if (sub) sub.textContent = val ? 'Messages from support team' : 'Support chat muted';
+      showToast(val ? '💬 Chat notifications on' : '💬 Chat notifications off');
+      break;
+    }
+    case 'location': {
+      // Update location text on home header
+      const locEl = document.getElementById('loc-text');
+      if (locEl) locEl.textContent = val ? '📍 Koramangala, Bengaluru' : '📍 Location disabled';
+      const sub = document.getElementById('s-loc-sub');
+      if (sub) sub.textContent = val ? 'Used for delivery address' : 'Location access denied';
+      showToast(val ? '📍 Location enabled' : '📍 Location disabled — delivery may be inaccurate');
+      break;
+    }
+    case 'analytics': {
+      // Hide/show session log in right panel
+      const logSection = document.getElementById('session-log-wrap');
+      if (logSection) logSection.style.display = val ? '' : 'none';
+      const sub = document.getElementById('s-analytics-sub');
+      if (sub) sub.textContent = val ? 'Session log visible in panel' : 'Session log hidden';
+      showToast(val ? '📊 Analytics sharing on' : '📊 Analytics sharing off');
+      break;
+    }
+    case 'darkMode': {
+      document.body.classList.toggle('light-mode', !val);
+      const sub = document.getElementById('s-dark-sub');
+      if (sub) sub.textContent = val ? 'Dark UI active' : 'Light UI active';
+      const ico = document.querySelector('#tog-darkMode').previousElementSibling
+                        ?.querySelector('.s-ico');
+      showToast(val ? '🌙 Dark mode on' : '☀️ Light mode on — the outer shell changed!');
+      break;
+    }
+  }
+}
+
+// ── ACCOUNT DELETION ──────────────────────────────
+function openDeleteSheet() {
+  document.getElementById('del-confirm-email').value = '';
+  hide('del-email-err');
+  document.getElementById('del-overlay').classList.add('show');
+  document.getElementById('del-sheet').classList.add('open');
+}
+function closeDeleteSheet() {
+  document.getElementById('del-overlay').classList.remove('show');
+  document.getElementById('del-sheet').classList.remove('open');
+}
+function doDeleteAccount() {
+  if (!currentUser) { closeDeleteSheet(); return; }
+  const typed = document.getElementById('del-confirm-email').value.trim().toLowerCase();
+  if (typed !== currentUser.email.toLowerCase()) {
+    show('del-email-err'); return;
+  }
+  // Remove from DB
+  const db = getDB().filter(u => u.email.toLowerCase() !== currentUser.email.toLowerCase());
+  saveDB(db);
+  // Wipe state
+  currentUser = null;
+  cart = [];
+  addresses = [
+    { id: 1, type: 'Home', icon: '🏠', iconBg: '#1a1f2e', line1: '42, 3rd Cross, Koramangala 5th Block', line2: 'Bengaluru, Karnataka — 560 095', isDefault: true },
+    { id: 2, type: 'Work', icon: '💼', iconBg: '#1a2e1f', line1: 'RMK Engineering College, Kavaraipettai', line2: 'Chennai, Tamil Nadu — 601 206', isDefault: false }
+  ];
+  updateCartBadges();
+  document.getElementById('cur-login').textContent = 'No';
+  document.getElementById('st-cart').textContent = '0';
+  document.getElementById('cur-items').textContent = '0';
+  document.getElementById('cur-total').textContent = '₹0';
+  closeDeleteSheet();
+  logAction('Account permanently deleted');
+  showToast('Account deleted. Sorry to see you go 💔');
+  screenStack = ['splash'];
+  currentScreen = 'splash';
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('sc-splash').classList.add('active');
+}
+
+// About / Terms sheets
+function showAboutSheet() {
+  document.getElementById('about-overlay').classList.add('show');
+  document.getElementById('about-sheet').classList.add('open');
+}
+function closeAboutSheet() {
+  document.getElementById('about-overlay').classList.remove('show');
+  document.getElementById('about-sheet').classList.remove('open');
+}
+function showTermsSheet() {
+  document.getElementById('terms-overlay').classList.add('show');
+  document.getElementById('terms-sheet').classList.add('open');
+}
+function closeTermsSheet() {
+  document.getElementById('terms-overlay').classList.remove('show');
+  document.getElementById('terms-sheet').classList.remove('open');
+}
+
+// ─────────────────────────────────────────
+//  ADDRESSES
+// ─────────────────────────────────────────
+let addresses = [
+  { id: 1, type: 'Home', icon: '🏠', iconBg: '#1a1f2e', line1: '42, 3rd Cross, Koramangala 5th Block', line2: 'Bengaluru, Karnataka — 560 095', isDefault: true },
+  { id: 2, type: 'Work', icon: '💼', iconBg: '#1a2e1f', line1: 'RMK Engineering College, Kavaraipettai', line2: 'Chennai, Tamil Nadu — 601 206', isDefault: false }
+];
+let editingAddrId = null;
+let selectedAddrType = 'Home';
+
+const ADDR_ICONS = { Home:'🏠', Work:'💼', College:'🏫', Other:'📌' };
+const ADDR_BG   = { Home:'#1a1f2e', Work:'#1a2e1f', College:'#2e2a1a', Other:'#2e1a1a' };
+
+function renderAddresses() {
+  const list = document.getElementById('addr-list');
+  if (!list) return;
+  if (addresses.length === 0) {
+    list.innerHTML = `<div style="text-align:center;padding:40px 20px">
+      <div style="font-size:52px;margin-bottom:12px">📍</div>
+      <p style="font-size:15px;font-weight:700;margin-bottom:6px">No addresses yet</p>
+      <p style="font-size:13px;color:#888">Tap below to add your first address</p></div>`;
+    return;
+  }
+  list.innerHTML = addresses.map(a => `
+    <div class="addr-card" id="addr-card-${a.id}" style="transition:opacity .3s,transform .3s">
+      <div class="addr-card-head">
+        <div class="addr-type">
+          <div class="addr-type-icon" style="background:${a.iconBg}">${a.icon}</div>
+          <h4>${a.type}</h4>
+        </div>
+        ${a.isDefault
+          ? '<span class="addr-default">Default</span>'
+          : `<button onclick="tap();setDefaultAddr(${a.id})" style="background:none;border:1px solid #2a2a35;border-radius:6px;color:#888;font-size:10px;font-weight:600;padding:3px 8px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='#ff6b35';this.style.color='#ff6b35'" onmouseout="this.style.borderColor='#2a2a35';this.style.color='#888'">Set Default</button>`
+        }
+      </div>
+      <p class="addr-text">${a.line1}<br>${a.line2}</p>
+      <div class="addr-actions">
+        <div class="addr-btn" onclick="tap();openEditAddr(${a.id})">✏️ Edit</div>
+        <div class="addr-btn del" onclick="tap();deleteAddr(${a.id})">🗑 Delete</div>
+      </div>
+    </div>`).join('');
+}
+
+function setDefaultAddr(id) {
+  addresses.forEach(a => a.isDefault = (a.id === id));
+  renderAddresses();
+  showToast('Default address updated 📍');
+  logAction('Default address set: id=' + id);
+}
+
+function deleteAddr(id) {
+  const card = document.getElementById('addr-card-' + id);
+  if (card) { card.style.opacity = '0'; card.style.transform = 'scale(.93) translateX(20px)'; }
+  setTimeout(() => {
+    addresses = addresses.filter(a => a.id !== id);
+    if (addresses.length && !addresses.some(a => a.isDefault)) addresses[0].isDefault = true;
+    renderAddresses();
+    showToast('Address removed 🗑');
+    logAction('Address deleted: id=' + id);
+  }, 320);
+}
+
+function openEditAddr(id) {
+  editingAddrId = id;
+  const a = addresses.find(x => x.id === id);
+  if (!a) return;
+  selectedAddrType = a.type;
+  document.getElementById('af-line1').value = a.line1;
+  document.getElementById('af-line2').value = a.line2;
+  document.getElementById('af-type').value = a.type;
+  document.getElementById('addr-sheet-title').textContent = 'Edit Address';
+  // highlight correct type button
+  document.querySelectorAll('#addr-type-btns .type-btn').forEach(b => {
+    b.classList.toggle('sel', b.textContent.includes(a.type));
+  });
+  openAddrSheet();
+}
+
+function openAddNewAddr() {
+  tap();
+  editingAddrId = null;
+  selectedAddrType = 'Home';
+  document.getElementById('af-line1').value = '';
+  document.getElementById('af-line2').value = '';
+  document.getElementById('af-type').value = 'Home';
+  document.getElementById('addr-sheet-title').textContent = 'Add New Address';
+  document.querySelectorAll('#addr-type-btns .type-btn').forEach((b, i) => b.classList.toggle('sel', i === 0));
+  openAddrSheet();
+}
+
+function selectAddrType(btn, type) {
+  selectedAddrType = type;
+  document.getElementById('af-type').value = type;
+  document.querySelectorAll('#addr-type-btns .type-btn').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+}
+
+function openAddrSheet() {
+  document.getElementById('addr-sheet').classList.add('open');
+  document.getElementById('addr-overlay').classList.add('show');
+  setTimeout(() => { const f = document.getElementById('af-line1'); if (f) f.focus(); }, 400);
+}
+
+function closeAddrSheet() {
+  document.getElementById('addr-sheet').classList.remove('open');
+  document.getElementById('addr-overlay').classList.remove('show');
+}
+
+function saveAddr() {
+  const type  = document.getElementById('af-type').value.trim() || 'Home';
+  const line1 = document.getElementById('af-line1').value.trim();
+  const line2 = document.getElementById('af-line2').value.trim();
+  if (!line1) { showToast('⚠️ Street address is required'); return; }
+  if (editingAddrId) {
+    const a = addresses.find(x => x.id === editingAddrId);
+    if (a) { a.type = type; a.line1 = line1; a.line2 = line2 || a.line2; a.icon = ADDR_ICONS[type]||'📌'; a.iconBg = ADDR_BG[type]||'#22222e'; }
+    showToast('Address updated ✅');
+    logAction('Address edited: ' + type);
+  } else {
+    addresses.push({ id: Date.now(), type, icon: ADDR_ICONS[type]||'📌', iconBg: ADDR_BG[type]||'#22222e', line1, line2: line2||'India', isDefault: addresses.length === 0 });
+    showToast('New address added ✅');
+    logAction('Address added: ' + type);
+  }
+  closeAddrSheet();
+  setTimeout(renderAddresses, 350);
+}
+
+// ─────────────────────────────────────────
+//  LANGUAGE
+// ─────────────────────────────────────────
+const LANGUAGES = [
+  { code:'en', name:'English', native:'English', flag:'🇬🇧' },
+  { code:'hi', name:'Hindi', native:'हिन्दी', flag:'🇮🇳' },
+  { code:'ta', name:'Tamil', native:'தமிழ்', flag:'🇮🇳' },
+  { code:'te', name:'Telugu', native:'తెలుగు', flag:'🇮🇳' },
+  { code:'kn', name:'Kannada', native:'ಕನ್ನಡ', flag:'🇮🇳' },
+  { code:'ml', name:'Malayalam', native:'മലയാളം', flag:'🇮🇳' },
+  { code:'mr', name:'Marathi', native:'मराठी', flag:'🇮🇳' },
+  { code:'bn', name:'Bengali', native:'বাংলা', flag:'🇮🇳' },
+  { code:'fr', name:'French', native:'Français', flag:'🇫🇷' },
+  { code:'ar', name:'Arabic', native:'العربية', flag:'🇸🇦' },
+];
+let currentLang = 'en';
+
+function renderLanguages() {
+  const list = document.getElementById('lang-list');
+  if (!list) return;
+  list.innerHTML = LANGUAGES.map(l => `
+    <div class="lang-option ${l.code === currentLang ? 'active' : ''}" onclick="selectLanguage('${l.code}','${l.name}')">
+      <div class="lang-left">
+        <span class="lang-flag">${l.flag}</span>
+        <div><div class="lang-name">${l.name}</div><div class="lang-native">${l.native}</div></div>
+      </div>
+      ${l.code === currentLang ? '<span class="lang-check">✓</span>' : ''}
+    </div>`).join('');
+}
+
+function selectLanguage(code, name) {
+  tap();
+  currentLang = code;
+  renderLanguages();
+  // Update the subtitle in settings
+  const sub = document.getElementById('s-lang-sub');
+  if (sub) sub.textContent = name;
+  showToast('Language set to ' + name + ' ✓');
+  logAction('Language changed: ' + name);
+  setTimeout(() => goBack(), 600);
+}
+
+// wrap session log div for analytics toggle
+document.addEventListener('DOMContentLoaded', () => {});
+
+// init
+renderHomeRestaurants();
+renderExplore();
+renderAddresses();
+renderLanguages();
+logAction('FoodRush v3 loaded');
+</script>
+</body>
+</html>

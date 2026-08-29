@@ -1,0 +1,5 @@
+{
+  "watch": ["src"],
+  "ext": "js,json",
+  "ignore": ["src/routes/Screenshots", "**/*.jpg", "**/*.jpeg", "**/*.png", "**/*.gif", "**/*.mp4"]
+}

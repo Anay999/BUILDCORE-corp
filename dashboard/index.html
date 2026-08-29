@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BuildCore ERP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <style>
+      *, *::before, *::after { box-sizing: border-box; }
+      html, body, #root {
+        margin: 0; padding: 0; height: 100%;
+        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+      }
+      /* Scrollbar polish */
+      ::-webkit-scrollbar { width: 6px; height: 6px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: rgba(100,116,139,0.35); border-radius: 99px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(100,116,139,0.6); }
+      /* Selection */
+      ::selection { background: rgba(99,102,241,0.25); }
+
+      /* ── Layout Density ─────────────────────────────────────── */
+      html[data-density="compact"]     { --d-card-pad: 12px 16px; --d-row-pad: 6px; --d-gap: 8px;  --d-section-gap: 10px; }
+      html[data-density="default"]     { --d-card-pad: 22px 24px; --d-row-pad: 11px; --d-gap: 12px; --d-section-gap: 14px; }
+      html[data-density="comfortable"] { --d-card-pad: 28px 32px; --d-row-pad: 16px; --d-gap: 18px; --d-section-gap: 20px; }
+
+      /* Density applies to every card and list row globally */
+      html[data-density="compact"] .bc-card     { padding: var(--d-card-pad) !important; }
+      html[data-density="comfortable"] .bc-card { padding: var(--d-card-pad) !important; }
+      html[data-density="compact"] .bc-row      { padding-top: var(--d-row-pad) !important; padding-bottom: var(--d-row-pad) !important; }
+      html[data-density="comfortable"] .bc-row  { padding-top: var(--d-row-pad) !important; padding-bottom: var(--d-row-pad) !important; }
+      html[data-density="compact"] .bc-section  { gap: var(--d-section-gap) !important; }
+      html[data-density="comfortable"] .bc-section { gap: var(--d-section-gap) !important; }
+
+      /* ── Select / Option dark theme fix ────────────────────── */
+      select option {
+        background: #0d1a2d;
+        color: #e8edf5;
+      }
+      html[data-theme="light"] select option {
+        background: #ffffff;
+        color: #0f172a;
+      }
+      /* Remove default select arrow colour bleed on dark */
+      select {
+        color-scheme: dark;
+      }
+      html[data-theme="light"] select {
+        color-scheme: light;
+      }
+
+      /* ── Animations ─────────────────────────────────────────── */
+      @keyframes fadeSlideIn {
+        from { opacity: 0; transform: translate(-50%, -48%); }
+        to   { opacity: 1; transform: translate(-50%, -50%); }
+      }
+      @keyframes settingsFadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes shimmer {
+        0%   { background-position: -400px 0; }
+        100% { background-position: 400px 0; }
+      }
+
+      /* ── Smooth accent/theme transitions ────────────────────── */
+      *, *::before, *::after { transition: background-color 0.18s ease, border-color 0.18s ease, color 0.15s ease; }
+      /* But NOT transforms/opacity — those should stay instant */
+      .bc-no-transition, .bc-no-transition * { transition: none !important; }
+    </style>
+  </head>
+  <body>
+    <!-- ⚡ Anti-FOUC: apply saved theme synchronously before React mounts -->
+    <script>
+      (function() {
+        try {
+          var dark    = localStorage.getItem("bc_dark") !== "false";
+          var accent  = localStorage.getItem("bc_accent") || "#f59e0b";
+          var density = (localStorage.getItem("bc_density") || "Default").toLowerCase();
+          var fs      = localStorage.getItem("bc_fontsize");
+          var fsMap   = { Small: "12px", Medium: "13px", Large: "15px" };
+
+          var root = document.documentElement;
+
+          // Background colour so the page never flashes white-on-dark or vice versa
+          document.body.style.background = dark ? "#06101f" : "#f0f4f8";
+          document.body.style.color      = dark ? "#e8edf5" : "#0f172a";
+
+          // Data attributes picked up by CSS density rules
+          root.setAttribute("data-density", density);
+          root.setAttribute("data-theme",   dark ? "dark" : "light");
+
+          // Font size
+          if (fs && fsMap[fs]) root.style.fontSize = fsMap[fs];
+
+          // Accent CSS variable (used by ::selection and any var(--accent) refs)
+          root.style.setProperty("--accent", accent);
+        } catch(e) {}
+      })();
+    </script>
+
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
