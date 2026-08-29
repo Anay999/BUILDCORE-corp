@@ -960,6 +960,14 @@ function LoginForm({ onBack }) {
   const slideRef = useRef(null);
 
   useEffect(() => {
+    const savedEmail = localStorage.getItem("bc_remember_email");
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setRememberMe(true);
+    }
+  }, []);
+
+  useEffect(() => {
     const t = setInterval(() => setSlideIdx(i => (i + 1) % SLIDE_IMAGES.length), 5000);
     return () => clearInterval(t);
   }, []);
@@ -1179,11 +1187,42 @@ function LoginForm({ onBack }) {
                   </div>
                 </div>
                 {/* Remember me */}
-                <label style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}>
-                  <div onClick={() => setRememberMe(r => !r)} style={{ width:18, height:18, borderRadius:5, border:"1px solid " + (rememberMe ? "#f59e0b" : "#e5e0d8"), background: rememberMe ? "#f59e0b" : "transparent", display:"flex", alignItems:"center", justifyContent:"center", transition:"all .15s", flexShrink:0 }}>
-                    {rememberMe && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0f172a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                <label
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setRememberMe(prev => !prev);
+                  }}
+                  style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer", userSelect:"none" }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    readOnly
+                    style={{ position: "absolute", opacity: 0, width: 0, height: 0, pointerEvents: "none" }}
+                  />
+                  <div
+                    style={{
+                      width: 18,
+                      height: 18,
+                      borderRadius: 5,
+                      border: "1px solid " + (rememberMe ? "#f59e0b" : "rgba(255,255,255,.3)"),
+                      background: rememberMe ? "#f59e0b" : "rgba(255,255,255,.05)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      transition: "all .15s",
+                      flexShrink: 0
+                    }}
+                  >
+                    {rememberMe && (
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0f172a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    )}
                   </div>
-                  <span style={{ fontSize:12, color:"rgba(255,255,255,.55)", fontWeight:500 }}>Remember me on this device</span>
+                  <span style={{ fontSize: 12, color: rememberMe ? "rgba(255,255,255,.9)" : "rgba(255,255,255,.55)", fontWeight: 500, transition: "color .15s" }}>
+                    Remember me on this device
+                  </span>
                 </label>
                 {error && (
                   <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid rgba(239,68,68,.25)" }}>
