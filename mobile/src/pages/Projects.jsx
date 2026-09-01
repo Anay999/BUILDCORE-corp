@@ -3,8 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { Ic, useApp } from "../context.jsx";
 import { api, fmt, fmtDate, statusBadge } from "../api.js";
 
-const STATUS_COLORS = { "In Progress": "#3b82f6", "Completed": "#10b981", "Delayed": "#ef4444", "Planned": "#8b5cf6", "On Hold": "#f59e0b" };
-const FILTERS = ["All", "In Progress", "Planned", "Delayed", "Completed", "On Hold"];
+const STATUS_COLORS = {
+  "Ongoing": "#3b82f6",
+  "In Progress": "#3b82f6",
+  "Completed": "#10b981",
+  "Delayed": "#ef4444",
+  "Planned": "#8b5cf6",
+  "On Hold": "#f59e0b",
+};
+const FILTERS = ["All", "Ongoing", "Planned", "Delayed", "Completed", "On Hold"];
 
 export default function ProjectsPage() {
   const nav = useNavigate();
@@ -33,12 +40,24 @@ export default function ProjectsPage() {
 
   const fetchProjects = () => {
     api.get("/projects")
-      .then(d => { setProjects(Array.isArray(d) ? d : []); setLoading(false); })
-      .catch(() => setLoading(false));
+      .then(d => {
+        setProjects(Array.isArray(d) ? d : []);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.warn("fetchProjects error:", err);
+        setLoading(false);
+      });
   };
 
   useEffect(() => {
     fetchProjects();
+    const timer = setInterval(fetchProjects, 8000); // 8s live sync
+    window.addEventListener("focus", fetchProjects);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", fetchProjects);
+    };
   }, []);
 
   const handleSearchLoc = async (text) => {
@@ -92,7 +111,9 @@ export default function ProjectsPage() {
   };
 
   const filtered = projects.filter(p => {
-    const matchF = filter === "All" || p.status === filter;
+    const pStat = (p.status || "").toLowerCase();
+    const fStat = filter.toLowerCase();
+    const matchF = filter === "All" || pStat === fStat || (fStat === "ongoing" && pStat === "in progress") || (fStat === "in progress" && pStat === "ongoing");
     const matchS = !search || p.title?.toLowerCase().includes(search.toLowerCase()) || p.location?.toLowerCase().includes(search.toLowerCase());
     return matchF && matchS;
   });
@@ -100,27 +121,43 @@ export default function ProjectsPage() {
   return (
     <>
       <div className="top-bar">
-        <h1>Projects</h1>
-        <button
-          onClick={() => setShowModal(true)}
-          style={{
-            marginLeft: "auto",
-            background: "linear-gradient(135deg, #3b82f6, #2563eb)",
-            color: "#ffffff",
-            border: "none",
-            borderRadius: 8,
-            padding: "6px 12px",
-            fontSize: 12,
-            fontWeight: 700,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: 4,
-            boxShadow: "0 2px 8px rgba(59,130,246,0.4)"
-          }}
-        >
-          <span>+</span> New Site
-        </button>
+        <h1>Projects ({projects.length})</h1>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+          <button
+            onClick={fetchProjects}
+            style={{
+              background: "#1e293b",
+              color: "#94a3b8",
+              border: "1px solid #334155",
+              borderRadius: 8,
+              padding: "6px 10px",
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            🔄 Sync
+          </button>
+          <button
+            onClick={() => setShowModal(true)}
+            style={{
+              background: "linear-gradient(135deg, #3b82f6, #2563eb)",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: 8,
+              padding: "6px 12px",
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              boxShadow: "0 2px 8px rgba(59,130,246,0.4)"
+            }}
+          >
+            <span>+</span> New Site
+          </button>
+        </div>
       </div>
 
       <div className="page-content">
@@ -139,14 +176,18 @@ export default function ProjectsPage() {
         </div>
 
         {loading ? (
-          <div style={{ textAlign: "center", padding: 40, color: "#64748b" }}>Loading…</div>
+          <div style={{ textAlign: "center", padding: 40, color: "#64748b" }}>Loading live projects…</div>
         ) : filtered.length === 0 ? (
-          <div className="empty-state"><Ic.FolderOpen s={40} /><p>No projects found</p></div>
+          <div className="empty-state">
+            <Ic.FolderOpen s={40} />
+            <p>No projects found</p>
+            <button onClick={fetchProjects} className="btn btn-secondary btn-sm" style={{ marginTop: 10 }}>Retry Sync</button>
+          </div>
         ) : (
           filtered.map(p => {
-            const pct = p.progress || 0;
+            const pct = p.progress || (p.status?.toLowerCase() === "completed" ? 100 : p.status?.toLowerCase() === "ongoing" ? 55 : 10);
             const budget = Number(p.budget) || 0;
-            const color = STATUS_COLORS[p.status] || "#64748b";
+            const color = STATUS_COLORS[p.status] || STATUS_COLORS["Ongoing"] || "#64748b";
             return (
               <div key={p.id} className="card" style={{ cursor: "pointer", borderLeft: `3px solid ${color}` }} onClick={() => nav(`/projects/${p.id}`)}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
@@ -237,6 +278,7 @@ export default function ProjectsPage() {
                 <label>Status</label>
                 <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
                   <option value="Planned">Planned</option>
+                  <option value="Ongoing">Ongoing</option>
                   <option value="In Progress">In Progress</option>
                   <option value="Delayed">Delayed</option>
                   <option value="Completed">Completed</option>

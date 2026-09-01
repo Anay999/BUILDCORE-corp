@@ -141,7 +141,7 @@ export default function GpsTrackerPage() {
   }, [navMode]);
 
   // ─── 1. Load Projects from Backend ──────────────────────────────────────────
-  useEffect(() => {
+  const fetchProjects = () => {
     api
       .get("/projects")
       .then((res) => {
@@ -154,6 +154,16 @@ export default function GpsTrackerPage() {
         }
       })
       .catch(() => {});
+  };
+
+  useEffect(() => {
+    fetchProjects();
+    const interval = setInterval(fetchProjects, 8000);
+    window.addEventListener("focus", fetchProjects);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", fetchProjects);
+    };
   }, []);
 
   // ─── 2. Initialize Leaflet Map Instance Safely ──────────────────────────────

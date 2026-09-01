@@ -1,6 +1,13 @@
-// BuildCore Unified API Client
-const PRIMARY_URL = "https://buildcore-anay-live.loca.lt/api";
-const LOCAL_URL = "http://192.168.1.71:5000/api";
+// BuildCore High-Reliability API Client
+const PRIMARY_URL = "http://192.168.1.71:5000/api"; // Fast Direct LAN
+const TUNNEL_URL = "https://buildcore-anay-live.loca.lt/api"; // Cloud Tunnel
+
+const CANDIDATE_URLS = [
+  PRIMARY_URL,
+  TUNNEL_URL,
+  "http://192.168.137.73:5000/api",
+  "http://10.0.2.2:5000/api",
+];
 
 export function getApiBaseUrl() {
   const custom = localStorage.getItem("bc_api_url");
@@ -29,7 +36,7 @@ function getHeaders(extra = {}) {
   };
 }
 
-async function doFetch(baseUrl, path, options = {}, timeoutMs = 8000) {
+async function doFetch(baseUrl, path, options = {}, timeoutMs = 4000) {
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
   const url = path.startsWith("http") ? path : `${baseUrl}${cleanPath}`;
   const controller = new AbortController();
@@ -42,6 +49,9 @@ async function doFetch(baseUrl, path, options = {}, timeoutMs = 8000) {
       signal: controller.signal,
     });
     clearTimeout(timer);
+    if (!res.ok && (res.status === 502 || res.status === 503 || res.status === 504)) {
+      throw new Error(`Server temporarily unavailable (${res.status})`);
+    }
     return res;
   } catch (err) {
     clearTimeout(timer);
@@ -57,15 +67,23 @@ async function request(method, path, body) {
   let res;
 
   try {
-    res = await doFetch(activeUrl, path, options, 6000);
+    res = await doFetch(activeUrl, path, options, 4000);
   } catch {
-    // If primary URL is unreachable, try secondary URL
-    const fallbackUrl = activeUrl === PRIMARY_URL ? LOCAL_URL : PRIMARY_URL;
-    try {
-      res = await doFetch(fallbackUrl, path, options, 4000);
-      setApiBaseUrl(fallbackUrl);
-    } catch {
-      throw new Error("Cannot reach server. Run 'npm start' and 'localtunnel' in terminal.");
+    // Failover across all candidate network routes
+    let found = false;
+    const candidates = CANDIDATE_URLS.filter((u) => u !== activeUrl);
+
+    for (const altUrl of candidates) {
+      try {
+        res = await doFetch(altUrl, path, options, 3000);
+        setApiBaseUrl(altUrl);
+        found = true;
+        break;
+      } catch {}
+    }
+
+    if (!found) {
+      throw new Error("Unable to reach backend. Check laptop server is running.");
     }
   }
 
@@ -101,10 +119,16 @@ export const api = {
     const activeUrl = getApiBaseUrl();
     let res;
     try {
-      res = await doFetch(activeUrl, path, options, 12000);
+      res = await doFetch(activeUrl, path, options, 10000);
     } catch {
-      const fallbackUrl = activeUrl === PRIMARY_URL ? LOCAL_URL : PRIMARY_URL;
-      res = await doFetch(fallbackUrl, path, options, 8000);
+      for (const altUrl of CANDIDATE_URLS) {
+        if (altUrl === activeUrl) continue;
+        try {
+          res = await doFetch(altUrl, path, options, 6000);
+          setApiBaseUrl(altUrl);
+          break;
+        } catch {}
+      }
     }
     const contentType = res.headers.get("content-type") || "";
     if (contentType.includes("application/json")) {
@@ -160,9 +184,11 @@ export function prioColor(p = "") {
 export function statusBadge(s = "") {
   const map = {
     active: { bg: "#064e3b", text: "#34d399", label: "Active" },
-    completed: { bg: "#1e3a8a", text: "#60a5fa", label: "Completed" },
+    ongoing: { bg: "#1e3a8a", text: "#60a5fa", label: "Ongoing" },
+    completed: { bg: "#064e3b", text: "#34d399", label: "Completed" },
     delayed: { bg: "#7f1d1d", text: "#f87171", label: "Delayed" },
     "on hold": { bg: "#78350f", text: "#fbbf24", label: "On Hold" },
+    planned: { bg: "#3b0764", text: "#c084fc", label: "Planned" },
     pending: { bg: "#374151", text: "#9ca3af", label: "Pending" },
     approved: { bg: "#064e3b", text: "#34d399", label: "Approved" },
     rejected: { bg: "#7f1d1d", text: "#f87171", label: "Rejected" },
