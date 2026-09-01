@@ -3,8 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { useApp } from "../context.jsx";
 import { api, getApiBaseUrl, setApiBaseUrl } from "../api.js";
 
-const LOCAL_URL = "http://192.168.1.71:5000/api";
-const TUNNEL_URL = "https://buildcore-anay-live.loca.lt/api";
+const CANDIDATE_URLS = [
+  "http://192.168.1.71:5000/api",   // Wi-Fi IP
+  "http://192.168.137.73:5000/api", // Mobile Hotspot IP
+  "https://buildcore-anay-live.loca.lt/api", // Cloud Tunnel
+];
 
 export default function LoginPage() {
   const { doLogin, showToast } = useApp();
@@ -16,9 +19,10 @@ export default function LoginPage() {
   const [pingStatus, setPingStatus] = useState("checking"); // "online", "offline", "checking"
 
   async function testUrl(targetUrl) {
+    if (!targetUrl) return false;
     const rootUrl = targetUrl.replace(/\/api\/?$/, "");
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 5000);
+    const timer = setTimeout(() => controller.abort(), 3000);
     try {
       const res = await fetch(rootUrl, {
         method: "GET",
@@ -32,7 +36,7 @@ export default function LoginPage() {
       clearTimeout(timer);
       if (res.ok) {
         const text = await res.text();
-        return text.includes("Construction AI Backend") || text.includes("api");
+        return text.includes("Construction AI Backend") || text.includes("api") || res.status === 200;
       }
       return false;
     } catch {
@@ -45,24 +49,33 @@ export default function LoginPage() {
     setPingStatus("checking");
     const current = getApiBaseUrl();
 
-    // 1. Try current URL
+    // 1. First test currently saved URL
     let ok = await testUrl(current);
     if (ok) {
       setPingStatus("online");
+      setServerUrl(current);
       return;
     }
 
-    // 2. Auto-switch to backup URL if current is unreachable
-    const backup = current.includes("loca.lt") ? LOCAL_URL : TUNNEL_URL;
-    ok = await testUrl(backup);
-    if (ok) {
-      setApiBaseUrl(backup);
-      setServerUrl(backup);
-      setPingStatus("online");
-      showToast(`Connected via ${backup.includes("loca.lt") ? "Cloud Tunnel" : "Local Wi-Fi"} 🟢`, "info");
-    } else {
-      setPingStatus("offline");
+    // 2. Automatically scan all candidate network URLs in parallel
+    const scanList = [
+      ...CANDIDATE_URLS.filter((u) => u !== current),
+      "http://localhost:5000/api",
+      "http://10.0.2.2:5000/api",
+    ];
+
+    for (const candUrl of scanList) {
+      const isAlive = await testUrl(candUrl);
+      if (isAlive) {
+        setApiBaseUrl(candUrl);
+        setServerUrl(candUrl);
+        setPingStatus("online");
+        showToast(`Auto-connected to backend at ${candUrl} 🟢`, "success", 2500);
+        return;
+      }
     }
+
+    setPingStatus("offline");
   }
 
   useEffect(() => {
@@ -125,29 +138,33 @@ export default function LoginPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ width: 8, height: 8, borderRadius: "50%", background: pingStatus === "online" ? "#10b981" : pingStatus === "checking" ? "#f59e0b" : "#ef4444", boxShadow: pingStatus === "online" ? "0 0 8px #10b981" : "none" }} />
             <span style={{ fontSize: 12, color: pingStatus === "online" ? "#34d399" : pingStatus === "checking" ? "#fbbf24" : "#f87171", fontWeight: 600 }}>
-              {pingStatus === "online" ? "Backend Online 🟢" : pingStatus === "checking" ? "Checking server..." : "Server Offline 🔴"}
+              {pingStatus === "online" ? "Backend Online 🟢" : pingStatus === "checking" ? "Scanning server..." : "Server Offline 🔴"}
             </span>
           </div>
-          <button type="button" onClick={() => setShowConfig(!showConfig)} style={{ background: "none", border: "none", color: "#38bdf8", fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
-            {showConfig ? "Close" : "Switch Server"}
-          </button>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button type="button" onClick={checkPing} style={{ background: "none", border: "none", color: "#34d399", fontSize: 12, cursor: "pointer", fontWeight: 700 }}>
+              🔄 Re-scan
+            </button>
+            <button type="button" onClick={() => setShowConfig(!showConfig)} style={{ background: "none", border: "none", color: "#38bdf8", fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
+              {showConfig ? "Close" : "Change IP"}
+            </button>
+          </div>
         </div>
 
         <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4, wordBreak: "break-all" }}>
-          {getApiBaseUrl()}
+          {serverUrl}
         </div>
 
         {showConfig && (
           <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #334155" }}>
-            <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 8 }}>
               <button
                 type="button"
-                onClick={() => handleSaveServer(TUNNEL_URL)}
+                onClick={() => handleSaveServer("http://192.168.1.71:5000/api")}
                 style={{
-                  flex: 1,
-                  padding: "6px 8px",
+                  padding: "7px 6px",
                   borderRadius: 6,
-                  background: serverUrl.includes("loca.lt") ? "#2563eb" : "#334155",
+                  background: serverUrl.includes("192.168.1.71") ? "#2563eb" : "#334155",
                   color: "#fff",
                   border: "none",
                   fontSize: 11,
@@ -155,16 +172,15 @@ export default function LoginPage() {
                   cursor: "pointer",
                 }}
               >
-                🌐 Cloud 5G
+                📶 Wi-Fi (1.71)
               </button>
               <button
                 type="button"
-                onClick={() => handleSaveServer(LOCAL_URL)}
+                onClick={() => handleSaveServer("http://192.168.137.73:5000/api")}
                 style={{
-                  flex: 1,
-                  padding: "6px 8px",
+                  padding: "7px 6px",
                   borderRadius: 6,
-                  background: serverUrl.includes("192.168") ? "#2563eb" : "#334155",
+                  background: serverUrl.includes("192.168.137") ? "#2563eb" : "#334155",
                   color: "#fff",
                   border: "none",
                   fontSize: 11,
@@ -172,9 +188,28 @@ export default function LoginPage() {
                   cursor: "pointer",
                 }}
               >
-                📶 Local Wi-Fi
+                📱 Hotspot (137.73)
               </button>
             </div>
+
+            <button
+              type="button"
+              onClick={() => handleSaveServer("https://buildcore-anay-live.loca.lt/api")}
+              style={{
+                width: "100%",
+                padding: "7px 6px",
+                borderRadius: 6,
+                background: serverUrl.includes("loca.lt") ? "#2563eb" : "#334155",
+                color: "#fff",
+                border: "none",
+                fontSize: 11,
+                fontWeight: 700,
+                cursor: "pointer",
+                marginBottom: 8,
+              }}
+            >
+              🌐 Cloud 5G Tunnel
+            </button>
 
             <label style={{ fontSize: 11, color: "#94a3b8", display: "block", marginBottom: 4 }}>Custom API URL:</label>
             <input

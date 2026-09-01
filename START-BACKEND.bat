@@ -1,22 +1,43 @@
 @echo off
 title BuildCore System Launcher
-echo ========================================================
-echo         STARTING BUILDCORE BACKEND ^& CLOUD TUNNEL
-echo ========================================================
+color 0A
+cls
+echo ======================================================================
+echo                     BUILDCORE SYSTEM LAUNCHER
+echo ======================================================================
+echo.
 
-:: 1. Launch Backend Server in a new window
-start "BuildCore Backend (Port 5000)" cmd /k "cd /d C:\Users\anayp\construction-ai-system\backend && npm run dev"
+:: Detect Active IPv4
+for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /c:"IPv4 Address"') do (
+    set IP=%%a
+    goto found_ip
+)
+:found_ip
+set IP=%IP: =%
 
-:: 2. Wait 3 seconds for backend to initialize
-timeout /t 3 /nobreak >nul
+echo [STATUS] Your Laptop IP Address is: %IP%
+echo [STATUS] Starting Node.js Backend Server on Port 5000...
+echo.
 
-:: 3. Launch Cloud Tunnel in a new window
-start "BuildCore Cloud Tunnel" cmd /k "npx -y localtunnel --port 5000 --subdomain buildcore-anay-live"
+:: 1. Start Backend in a dedicated window
+start "BuildCore Backend (Port 5000)" cmd /k "title BuildCore Backend && cd /d C:\Users\anayp\construction-ai-system\backend && npm start"
+
+:: 2. Wait 2 seconds for server to bind
+timeout /t 2 /nobreak >nul
+
+:: 3. Start Cloud Tunnel in a dedicated window
+echo [STATUS] Starting Cloud 5G Tunnel...
+start "BuildCore Cloud Tunnel" cmd /k "title BuildCore Cloud Tunnel && cd /d C:\Users\anayp\construction-ai-system && npx -y localtunnel --port 5000 --subdomain buildcore-anay-live"
 
 echo.
-echo [SUCCESS] Backend and Cloud Tunnel have been launched!
-echo - Local Wi-Fi: http://192.168.1.71:5000/api
-echo - Cloud 5G:    https://buildcore-anay-live.loca.lt/api
+echo ======================================================================
+echo  SUCCESS! BACKEND AND CLOUD TUNNEL ARE RUNNING!
+echo ======================================================================
 echo.
-echo You can now open the app on your phone!
+echo  - Mobile Direct Wi-Fi / Hotspot URL : http://%IP%:5000/api
+echo  - Mobile Cloud 5G URL              : https://buildcore-anay-live.loca.lt/api
+echo.
+echo  Open the app on your phone — it will connect automatically!
+echo ======================================================================
+echo.
 pause
