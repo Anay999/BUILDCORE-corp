@@ -2,6 +2,18 @@
 const PRIMARY_URL = "http://192.168.1.71:5000/api"; // Fast Direct LAN
 const TUNNEL_URL = "https://buildcore-anay-live.loca.lt/api"; // Cloud Tunnel
 
+export function normalizeApiUrl(url) {
+  if (!url) return PRIMARY_URL;
+  let clean = url.trim().replace(/\/+$/, "");
+  if (clean.includes("loca.lt") && clean.startsWith("http://")) {
+    clean = clean.replace("http://", "https://");
+  }
+  if (!clean.endsWith("/api")) {
+    clean += "/api";
+  }
+  return clean;
+}
+
 const CANDIDATE_URLS = [
   PRIMARY_URL,
   TUNNEL_URL,
@@ -11,12 +23,12 @@ const CANDIDATE_URLS = [
 
 export function getApiBaseUrl() {
   const custom = localStorage.getItem("bc_api_url");
-  if (custom) return custom.replace(/\/+$/, "");
+  if (custom) return normalizeApiUrl(custom);
   return PRIMARY_URL;
 }
 
 export function setApiBaseUrl(url) {
-  if (url) localStorage.setItem("bc_api_url", url.trim().replace(/\/+$/, ""));
+  if (url) localStorage.setItem("bc_api_url", normalizeApiUrl(url));
   else localStorage.removeItem("bc_api_url");
 }
 
@@ -37,8 +49,9 @@ function getHeaders(extra = {}) {
 }
 
 async function doFetch(baseUrl, path, options = {}, timeoutMs = 4000) {
+  const cleanBase = normalizeApiUrl(baseUrl);
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
-  const url = path.startsWith("http") ? path : `${baseUrl}${cleanPath}`;
+  const url = path.startsWith("http") ? path : `${cleanBase}${cleanPath}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -95,7 +108,10 @@ async function request(method, path, body) {
   }
 
   const text = await res.text();
-  if (!res.ok) throw new Error(`Error ${res.status}: ${text.slice(0, 80)}`);
+  if (text.includes("<!DOCTYPE") || text.includes("<html")) {
+    throw new Error("Server returned HTML page. Reconnecting...");
+  }
+  if (!res.ok) throw new Error(`Error ${res.status}`);
   return text;
 }
 

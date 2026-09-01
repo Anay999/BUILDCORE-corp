@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../context.jsx";
-import { api, getApiBaseUrl, setApiBaseUrl } from "../api.js";
+import { api, getApiBaseUrl, setApiBaseUrl, normalizeApiUrl } from "../api.js";
 
 export default function LoginPage() {
   const { doLogin, showToast } = useApp();
@@ -58,8 +58,10 @@ export default function LoginPage() {
   }
 
   function handleSaveServer() {
-    setApiBaseUrl(serverUrl);
-    showToast("Server URL saved!", "info");
+    const clean = normalizeApiUrl(serverUrl);
+    setApiBaseUrl(clean);
+    setServerUrl(clean);
+    showToast("Server URL updated!", "info");
     setShowConfig(false);
     checkPing();
   }
