@@ -6,6 +6,7 @@ const MENU = [
   {
     group: "Field Operations & Intelligence",
     items: [
+      { label: "Edge AI PPE Scanner", path: "/edge-ai", icon: <Ic.Zap s={20} />, color: "#ec4899" },
       { label: "Live GPS Tracker", path: "/gps", icon: <Ic.MapPin s={20} />, color: "#38bdf8" },
       { label: "AI Site Intelligence", path: "/ai-analysis", icon: <Ic.Zap s={20} />, color: "#8b5cf6" },
       { label: "Team Chat & DMs", path: "/chat", icon: <Ic.MessageSquare s={20} />, color: "#3b82f6" },

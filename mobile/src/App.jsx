@@ -33,6 +33,7 @@ import AiAnalysisPage from "./pages/AiAnalysis.jsx";
 import ReportsPage from "./pages/Reports.jsx";
 import ActivityPage from "./pages/Activity.jsx";
 import ClientRequestsPage from "./pages/ClientRequests.jsx";
+import EdgeAiScannerPage from "./pages/EdgeAiScanner.jsx";
 
 // ─── Bottom Navigation ───────────────────────────────────────────────────────
 function BottomNav() {
@@ -137,6 +138,7 @@ export default function App() {
             <Route path="/reports" element={<Shell><ReportsPage /></Shell>} />
             <Route path="/activity" element={<Shell><ActivityPage /></Shell>} />
             <Route path="/client-requests" element={<Shell><ClientRequestsPage /></Shell>} />
+            <Route path="/edge-ai" element={<Shell><EdgeAiScannerPage /></Shell>} />
             <Route path="/settings" element={<Shell><SettingsPage /></Shell>} />
             <Route path="/gps" element={<Shell><GpsTrackerPage /></Shell>} />
             <Route path="/more" element={<Shell><MorePage /></Shell>} />
