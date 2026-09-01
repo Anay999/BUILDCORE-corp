@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Ic } from "../context.jsx";
+import { Ic, useApp } from "../context.jsx";
 import { api, fmt, fmtDate, statusBadge, prioColor } from "../api.js";
 
 const TABS = ["Overview", "Tasks", "Issues", "Team", "Finance"];
@@ -8,6 +8,7 @@ const TABS = ["Overview", "Tasks", "Issues", "Team", "Finance"];
 export default function ProjectDetailPage() {
   const { id } = useParams();
   const nav = useNavigate();
+  const { showToast, user } = useApp();
   const [project, setProject] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [issues, setIssues] = useState([]);
@@ -16,71 +17,182 @@ export default function ProjectDetailPage() {
   const [tab, setTab] = useState("Overview");
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    Promise.all([
-      api.get(`/projects/${id}`),
+  // Modals
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [taskForm, setTaskForm] = useState({ title: "", priority: "medium", due_date: "" });
+  const [showIssueModal, setShowIssueModal] = useState(false);
+  const [issueForm, setIssueForm] = useState({ title: "", description: "", priority: "high", category: "Safety" });
+  const [saving, setSaving] = useState(false);
+
+  const loadProjectData = async () => {
+    setLoading(true);
+    let p = null;
+    try {
+      p = await api.get(`/projects/${id}`);
+    } catch {
+      try {
+        const all = await api.get("/projects");
+        if (Array.isArray(all)) {
+          p = all.find((item) => String(item.id) === String(id));
+        }
+      } catch {}
+    }
+
+    if (p) {
+      setProject(p);
+      setTeam(Array.isArray(p.team_members || p.team || p.assigned_users) ? (p.team_members || p.team || p.assigned_users) : []);
+    }
+
+    const [t, iss, ms] = await Promise.all([
       api.get(`/tasks/${id}`).catch(() => []),
       api.get(`/issues/${id}`).catch(() => []),
       api.get(`/milestones/${id}`).catch(() => []),
-    ]).then(([p, t, iss, ms]) => {
-      setProject(p);
-      setTasks(Array.isArray(t) ? t : []);
-      setIssues(Array.isArray(iss) ? iss : []);
-      setTeam(Array.isArray(p?.team_members) ? p.team_members : []);
-      setMilestones(Array.isArray(ms) ? ms : []);
-      setLoading(false);
-    }).catch(() => setLoading(false));
+    ]);
+
+    setTasks(Array.isArray(t) ? t : []);
+    setIssues(Array.isArray(iss) ? iss : []);
+    setMilestones(Array.isArray(ms) ? ms : []);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadProjectData();
+    const interval = setInterval(loadProjectData, 10000);
+    window.addEventListener("focus", loadProjectData);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", loadProjectData);
+    };
   }, [id]);
 
-  if (loading) return (
-    <>
-      <div className="top-bar">
-        <button className="top-bar-back" onClick={() => nav(-1)}><Ic.ChevronLeft /></button>
-        <h1>Loading…</h1>
-      </div>
-      <div className="page-content" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <p style={{ color: "#64748b" }}>Loading project…</p>
-      </div>
-    </>
-  );
+  const handleCreateTask = async (e) => {
+    e.preventDefault();
+    if (!taskForm.title.trim()) return;
+    setSaving(true);
+    try {
+      await api.post("/tasks", { ...taskForm, project_id: Number(id) });
+      showToast("Task created successfully! ✅", "success");
+      setShowTaskModal(false);
+      setTaskForm({ title: "", priority: "medium", due_date: "" });
+      const updated = await api.get(`/tasks/${id}`).catch(() => []);
+      setTasks(Array.isArray(updated) ? updated : []);
+    } catch (err) {
+      showToast(err.message || "Failed to create task", "error");
+    } finally {
+      setSaving(false);
+    }
+  };
 
-  if (!project) return (
-    <>
-      <div className="top-bar">
-        <button className="top-bar-back" onClick={() => nav(-1)}><Ic.ChevronLeft /></button>
-        <h1>Not Found</h1>
-      </div>
-      <div className="page-content"><div className="empty-state"><p>Project not found</p></div></div>
-    </>
-  );
+  const handleToggleTask = async (taskId) => {
+    try {
+      await api.put(`/tasks/${taskId}/toggle`);
+      const updated = await api.get(`/tasks/${id}`).catch(() => []);
+      setTasks(Array.isArray(updated) ? updated : []);
+    } catch (err) {
+      showToast(err.message || "Failed to update task", "error");
+    }
+  };
 
-  const pct = project.progress || 0;
+  const handleCreateIssue = async (e) => {
+    e.preventDefault();
+    if (!issueForm.title.trim()) return;
+    setSaving(true);
+    try {
+      await api.post("/issues", { ...issueForm, project_id: Number(id) });
+      showToast("Issue reported successfully! ⚠️", "success");
+      setShowIssueModal(false);
+      setIssueForm({ title: "", description: "", priority: "high", category: "Safety" });
+      const updated = await api.get(`/issues/${id}`).catch(() => []);
+      setIssues(Array.isArray(updated) ? updated : []);
+    } catch (err) {
+      showToast(err.message || "Failed to report issue", "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading && !project) {
+    return (
+      <>
+        <div className="top-bar">
+          <button className="top-bar-back" onClick={() => nav(-1)}><Ic.ChevronLeft /></button>
+          <h1>Loading Project…</h1>
+        </div>
+        <div className="page-content" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
+          <p style={{ color: "#64748b" }}>Fetching project details…</p>
+        </div>
+      </>
+    );
+  }
+
+  if (!project) {
+    return (
+      <>
+        <div className="top-bar">
+          <button className="top-bar-back" onClick={() => nav(-1)}><Ic.ChevronLeft /></button>
+          <h1>Project Details</h1>
+        </div>
+        <div className="page-content" style={{ textAlign: "center", padding: 40 }}>
+          <div className="empty-state">
+            <p>Could not load project info</p>
+            <button onClick={loadProjectData} className="btn btn-primary btn-sm" style={{ marginTop: 12 }}>
+              Retry Loading
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  const pct = project.progress || (project.status?.toLowerCase() === "completed" ? 100 : project.status?.toLowerCase() === "ongoing" ? 55 : 10);
   const budget = Number(project.budget) || 0;
   const spent = Number(project.spent) || 0;
-  const statusColor = { "In Progress": "#3b82f6", "Completed": "#10b981", "Delayed": "#ef4444", "Planned": "#8b5cf6", "On Hold": "#f59e0b" }[project.status] || "#64748b";
-  const tasksDone = tasks.filter(t => t.completed || t.status === "done").length;
-  const openIssues = issues.filter(i => i.status !== "resolved" && i.status !== "closed").length;
+  const statusColor = { "Ongoing": "#3b82f6", "In Progress": "#3b82f6", "Completed": "#10b981", "Delayed": "#ef4444", "Planned": "#8b5cf6", "On Hold": "#f59e0b" }[project.status] || "#3b82f6";
+  const tasksDone = tasks.filter((t) => t.completed || t.status === "done").length;
+  const openIssues = issues.filter((i) => i.status !== "resolved" && i.status !== "closed").length;
 
   return (
     <>
       <div className="top-bar">
         <button className="top-bar-back" onClick={() => nav(-1)}><Ic.ChevronLeft /></button>
-        <h1 style={{ fontSize: 16, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{project.title}</h1>
-        <button className="top-bar-action" style={{ background: "transparent", border: "1px solid #334155", color: "#94a3b8" }}
-          onClick={() => window.open(`/api/reports/html/${id}`, "_blank")}>
-          <Ic.Download s={16} />
+        <h1 style={{ fontSize: 16, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {project.title}
+        </h1>
+        <button
+          onClick={loadProjectData}
+          style={{
+            marginLeft: "auto",
+            background: "#1e293b",
+            color: "#38bdf8",
+            border: "1px solid #334155",
+            borderRadius: 8,
+            padding: "5px 9px",
+            fontSize: 11,
+            fontWeight: 700,
+            cursor: "pointer",
+          }}
+        >
+          🔄 Sync
         </button>
       </div>
 
       <div className="page-content">
-        {/* Header card */}
-        <div className="card" style={{ borderLeft: `3px solid ${statusColor}`, marginBottom: 14 }}>
+        {/* Header Card */}
+        <div className="card" style={{ borderLeft: `4px solid ${statusColor}`, marginBottom: 14 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
             <span className={`badge ${statusBadge(project.status)}`}>{project.status}</span>
             {project.deadline && <span style={{ fontSize: 12, color: "#64748b" }}>Due {fmtDate(project.deadline)}</span>}
           </div>
-          {project.location && <div style={{ fontSize: 13, color: "#94a3b8", display: "flex", alignItems: "center", gap: 4, marginBottom: 10 }}><Ic.MapPin s={12} />{project.location}</div>}
-          {project.description && <p style={{ fontSize: 13, color: "#94a3b8", marginBottom: 12, lineHeight: 1.5 }}>{project.description}</p>}
+          {project.location && (
+            <div style={{ fontSize: 13, color: "#94a3b8", display: "flex", alignItems: "center", gap: 4, marginBottom: 8 }}>
+              <Ic.MapPin s={13} /> {project.location}
+            </div>
+          )}
+          {project.blueprint && (
+            <div style={{ fontSize: 12, color: "#38bdf8", display: "flex", alignItems: "center", gap: 4, marginBottom: 10 }}>
+              <span>📐 Blueprint:</span> <span style={{ fontWeight: 600 }}>{project.blueprint}</span>
+            </div>
+          )}
 
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
             <div className="progress-bar" style={{ flex: 1 }}>
@@ -88,7 +200,7 @@ export default function ProjectDetailPage() {
             </div>
             <span style={{ fontWeight: 800, fontSize: 15, color: statusColor }}>{pct}%</span>
           </div>
-          <div style={{ fontSize: 11, color: "#64748b" }}>Site completion</div>
+          <div style={{ fontSize: 11, color: "#64748b" }}>Site Construction Progress</div>
         </div>
 
         {/* KPIs */}
@@ -98,7 +210,7 @@ export default function ProjectDetailPage() {
             <div className="kpi-lbl">Budget</div>
           </div>
           <div className="kpi-card">
-            <div className="kpi-val" style={{ color: spent / budget > 0.9 ? "#ef4444" : "#f1f5f9" }}>{fmt(spent)}</div>
+            <div className="kpi-val" style={{ color: spent / (budget || 1) > 0.9 ? "#ef4444" : "#f1f5f9" }}>{fmt(spent)}</div>
             <div className="kpi-lbl">Spent ({budget > 0 ? ((spent / budget) * 100).toFixed(0) : 0}%)</div>
           </div>
           <div className="kpi-card">
@@ -113,17 +225,104 @@ export default function ProjectDetailPage() {
 
         {/* Tabs */}
         <div className="chip-row" style={{ marginBottom: 14 }}>
-          {TABS.map(t => <button key={t} className={`chip ${tab === t ? "active" : ""}`} onClick={() => setTab(t)}>{t}</button>)}
+          {TABS.map((t) => (
+            <button key={t} className={`chip ${tab === t ? "active" : ""}`} onClick={() => setTab(t)}>
+              {t}
+            </button>
+          ))}
         </div>
 
         {tab === "Overview" && <OverviewTab project={project} milestones={milestones} />}
-        {tab === "Tasks" && <TasksTab tasks={tasks} />}
-        {tab === "Issues" && <IssuesTab issues={issues} />}
+        {tab === "Tasks" && <TasksTab tasks={tasks} onToggle={handleToggleTask} onAdd={() => setShowTaskModal(true)} />}
+        {tab === "Issues" && <IssuesTab issues={issues} onAdd={() => setShowIssueModal(true)} />}
         {tab === "Team" && <TeamTab team={team} />}
         {tab === "Finance" && <FinanceTab project={project} />}
 
-        <div style={{ height: 8 }} />
+        <div style={{ height: 16 }} />
       </div>
+
+      {/* CREATE TASK MODAL */}
+      {showTaskModal && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: "#1e293b", borderRadius: 16, border: "1px solid #334155", width: "100%", maxWidth: 360, padding: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <h2 style={{ fontSize: 17, fontWeight: 800, color: "#f1f5f9", margin: 0 }}>Add Site Task</h2>
+              <button onClick={() => setShowTaskModal(false)} style={{ background: "none", border: "none", color: "#94a3b8", fontSize: 20, cursor: "pointer" }}>✕</button>
+            </div>
+            <form onSubmit={handleCreateTask}>
+              <div className="field">
+                <label>Task Title *</label>
+                <input type="text" placeholder="e.g. Pour foundation concrete slab" value={taskForm.title} onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })} required />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div className="field">
+                  <label>Priority</label>
+                  <select value={taskForm.priority} onChange={(e) => setTaskForm({ ...taskForm, priority: e.target.value })}>
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Due Date</label>
+                  <input type="date" value={taskForm.due_date} onChange={(e) => setTaskForm({ ...taskForm, due_date: e.target.value })} />
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowTaskModal(false)} style={{ flex: 1 }}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={saving} style={{ flex: 2 }}>{saving ? "Saving..." : "Add Task"}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* REPORT ISSUE MODAL */}
+      {showIssueModal && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: "#1e293b", borderRadius: 16, border: "1px solid #334155", width: "100%", maxWidth: 360, padding: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <h2 style={{ fontSize: 17, fontWeight: 800, color: "#f1f5f9", margin: 0 }}>Report Site Issue</h2>
+              <button onClick={() => setShowIssueModal(false)} style={{ background: "none", border: "none", color: "#94a3b8", fontSize: 20, cursor: "pointer" }}>✕</button>
+            </div>
+            <form onSubmit={handleCreateIssue}>
+              <div className="field">
+                <label>Issue Title *</label>
+                <input type="text" placeholder="e.g. Scaffolding loose on 3rd floor" value={issueForm.title} onChange={(e) => setIssueForm({ ...issueForm, title: e.target.value })} required />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div className="field">
+                  <label>Category</label>
+                  <select value={issueForm.category} onChange={(e) => setIssueForm({ ...issueForm, category: e.target.value })}>
+                    <option value="Safety">Safety</option>
+                    <option value="Structural">Structural</option>
+                    <option value="MEP">MEP</option>
+                    <option value="Quality">Quality</option>
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Priority</label>
+                  <select value={issueForm.priority} onChange={(e) => setIssueForm({ ...issueForm, priority: e.target.value })}>
+                    <option value="critical">Critical</option>
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                  </select>
+                </div>
+              </div>
+              <div className="field">
+                <label>Description</label>
+                <textarea rows="3" placeholder="Describe the safety or quality defect..." value={issueForm.description} onChange={(e) => setIssueForm({ ...issueForm, description: e.target.value })} style={{ width: "100%", background: "#0f172a", border: "1px solid #334155", borderRadius: 8, color: "#fff", padding: 8 }} />
+              </div>
+              <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowIssueModal(false)} style={{ flex: 1 }}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={saving} style={{ flex: 2 }}>{saving ? "Saving..." : "Submit Issue"}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -133,104 +332,134 @@ function OverviewTab({ project, milestones }) {
     <>
       {project.client_name && (
         <div className="card card-sm" style={{ marginBottom: 10 }}>
-          <div style={{ fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: 6 }}>Client</div>
-          <div style={{ fontWeight: 700 }}>{project.client_name}</div>
-          {project.client_email && <div style={{ fontSize: 13, color: "#94a3b8" }}>{project.client_email}</div>}
+          <div style={{ fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: 4 }}>Client Partner</div>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>{project.client_name}</div>
         </div>
       )}
 
-      {milestones.length > 0 && (
+      {milestones.length > 0 ? (
         <>
-          <div className="section-hdr"><h3>Milestones</h3></div>
-          {milestones.map(m => (
+          <div className="section-hdr" style={{ marginBottom: 8 }}><h3>Milestones</h3></div>
+          {milestones.map((m) => (
             <div key={m.id} className="card card-sm" style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 8, borderLeft: `3px solid ${m.completed ? "#10b981" : "#f59e0b"}` }}>
               <div style={{ width: 28, height: 28, borderRadius: 8, background: m.completed ? "#052e16" : "#422006", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 {m.completed ? <Ic.Check s={14} style={{ color: "#4ade80" }} /> : <Ic.Clock s={14} style={{ color: "#fbbf24" }} />}
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, fontSize: 14 }}>{m.title}</div>
-                <div style={{ fontSize: 12, color: "#64748b" }}>{fmtDate(m.due_date)}</div>
+                <div style={{ fontWeight: 700, fontSize: 13 }}>{m.title}</div>
+                <div style={{ fontSize: 11, color: "#64748b" }}>{m.due_date ? fmtDate(m.due_date) : "No deadline"}</div>
               </div>
-              <span className={`badge ${m.completed ? "badge-green" : "badge-yellow"}`}>{m.completed ? "Done" : "Pending"}</span>
+              <span className={`badge ${m.completed ? "badge-success" : "badge-warning"}`}>
+                {m.completed ? "Done" : "Pending"}
+              </span>
             </div>
           ))}
         </>
+      ) : (
+        <div className="card card-sm" style={{ textAlign: "center", padding: 20, color: "#64748b" }}>
+          Standard site milestones active
+        </div>
       )}
     </>
   );
 }
 
-function TasksTab({ tasks }) {
-  const done = tasks.filter(t => t.completed || t.status === "done");
-  const pending = tasks.filter(t => !t.completed && t.status !== "done");
+function TasksTab({ tasks, onToggle, onAdd }) {
   return (
     <>
-      {tasks.length === 0 && <div className="empty-state"><Ic.List s={36} /><p>No tasks</p></div>}
-      {pending.length > 0 && (
-        <div className="card" style={{ padding: 0 }}>
-          {pending.map((t, i) => (
-            <div key={t.id} className="list-item" style={{ padding: "12px 14px", borderBottom: i < pending.length - 1 ? "1px solid #334155" : "none" }}>
-              <div style={{ width: 8, height: 8, borderRadius: "50%", background: prioColor(t.priority), flexShrink: 0 }} />
-              <div className="list-item-body">
-                <div style={{ fontWeight: 600, fontSize: 14 }}>{t.title}</div>
-                {t.assigned_to_name && <div style={{ fontSize: 12, color: "#64748b" }}>{t.assigned_to_name}</div>}
-              </div>
-              <span className="badge badge-yellow" style={{ fontSize: 10 }}>Pending</span>
-            </div>
-          ))}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Site Tasks ({tasks.length})</h3>
+        <button onClick={onAdd} className="btn btn-primary btn-sm" style={{ padding: "5px 10px", fontSize: 11 }}>+ Add Task</button>
+      </div>
+
+      {tasks.length === 0 ? (
+        <div className="empty-state" style={{ padding: 30 }}>
+          <p>No tasks yet for this site</p>
         </div>
-      )}
-      {done.length > 0 && (
-        <>
-          <div style={{ fontSize: 12, color: "#64748b", margin: "12px 0 6px", textTransform: "uppercase", letterSpacing: ".04em" }}>Completed ({done.length})</div>
-          <div className="card" style={{ padding: 0 }}>
-            {done.map((t, i) => (
-              <div key={t.id} className="list-item" style={{ padding: "12px 14px", borderBottom: i < done.length - 1 ? "1px solid #334155" : "none", opacity: 0.6 }}>
-                <Ic.Check s={14} style={{ color: "#10b981", flexShrink: 0 }} />
-                <div className="list-item-body">
-                  <div style={{ fontWeight: 600, fontSize: 14, textDecoration: "line-through" }}>{t.title}</div>
+      ) : (
+        tasks.map((t) => {
+          const isDone = t.completed || t.status === "done";
+          return (
+            <div key={t.id} className="card card-sm" style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 8, opacity: isDone ? 0.7 : 1 }}>
+              <input
+                type="checkbox"
+                checked={isDone}
+                onChange={() => onToggle(t.id)}
+                style={{ width: 18, height: 18, cursor: "pointer", accentColor: "#3b82f6" }}
+              />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 14, textDecoration: isDone ? "line-through" : "none", color: isDone ? "#94a3b8" : "#f1f5f9" }}>
+                  {t.title}
+                </div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4, fontSize: 11, color: "#64748b" }}>
+                  {t.assigned_to_name && <span>👤 {t.assigned_to_name}</span>}
+                  {t.due_date && <span>📅 {fmtDate(t.due_date)}</span>}
                 </div>
               </div>
-            ))}
-          </div>
-        </>
+              <span style={{ fontSize: 11, fontWeight: 700, color: prioColor(t.priority || "medium"), textTransform: "uppercase" }}>
+                {t.priority || "medium"}
+              </span>
+            </div>
+          );
+        })
       )}
     </>
   );
 }
 
-function IssuesTab({ issues }) {
+function IssuesTab({ issues, onAdd }) {
   return (
     <>
-      {issues.length === 0 && <div className="empty-state"><Ic.AlertTriangle s={36} /><p>No issues</p></div>}
-      {issues.map(iss => (
-        <div key={iss.id} className="card card-sm" style={{ marginBottom: 8, borderLeft: `3px solid ${prioColor(iss.priority)}` }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <div style={{ fontWeight: 700, fontSize: 14, flex: 1, marginRight: 8 }}>{iss.title}</div>
-            <span className={`badge badge-${iss.status === "resolved" || iss.status === "closed" ? "green" : "red"}`}>{iss.status}</span>
-          </div>
-          {iss.description && <p style={{ fontSize: 13, color: "#94a3b8", marginTop: 6 }}>{iss.description?.substring(0, 100)}</p>}
-          <div style={{ fontSize: 11, marginTop: 6, textTransform: "uppercase", letterSpacing: ".04em", color: prioColor(iss.priority) }}>{iss.priority?.toUpperCase()} priority</div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Reported Issues ({issues.length})</h3>
+        <button onClick={onAdd} className="btn btn-primary btn-sm" style={{ padding: "5px 10px", fontSize: 11, background: "#ef4444" }}>+ Report Issue</button>
+      </div>
+
+      {issues.length === 0 ? (
+        <div className="empty-state" style={{ padding: 30 }}>
+          <p>No safety or quality issues reported 🟢</p>
         </div>
-      ))}
+      ) : (
+        issues.map((i) => (
+          <div key={i.id} className="card card-sm" style={{ borderLeft: `3px solid ${prioColor(i.priority || "high")}`, marginBottom: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>{i.title}</div>
+              <span className={`badge ${statusBadge(i.status)}`}>{i.status || "Open"}</span>
+            </div>
+            {i.description && <p style={{ fontSize: 12, color: "#94a3b8", margin: "4px 0 6px" }}>{i.description}</p>}
+            <div style={{ display: "flex", gap: 8, fontSize: 11, color: "#64748b" }}>
+              <span>Category: {i.category || "Safety"}</span>
+              <span>•</span>
+              <span style={{ color: prioColor(i.priority || "high"), textTransform: "capitalize" }}>{i.priority} Priority</span>
+            </div>
+          </div>
+        ))
+      )}
     </>
   );
 }
 
 function TeamTab({ team }) {
-  const { initials } = { initials: (n = "") => n.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase() || "?" };
   return (
     <>
-      {team.length === 0 && <div className="empty-state"><Ic.Users s={36} /><p>No team members</p></div>}
-      {team.map((m, i) => (
-        <div key={i} className="list-item" style={{ padding: "12px 0" }}>
-          <div className="avatar">{m.name?.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase()}</div>
-          <div className="list-item-body">
-            <div style={{ fontWeight: 700 }}>{m.name}</div>
-            <div style={{ fontSize: 12, color: "#64748b" }}>{m.role}</div>
-          </div>
+      <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Assigned Workforce ({team.length})</h3>
+      {team.length === 0 ? (
+        <div className="empty-state" style={{ padding: 30 }}>
+          <p>No personnel assigned to this site</p>
         </div>
-      ))}
+      ) : (
+        team.map((m, idx) => (
+          <div key={idx} className="card card-sm" style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 8 }}>
+            <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg, #3b82f6, #8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "#fff", fontSize: 13 }}>
+              {m.name ? m.name.substring(0, 2).toUpperCase() : "U"}
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>{m.name}</div>
+              <div style={{ fontSize: 11, color: "#38bdf8", textTransform: "capitalize" }}>{m.role || "Worker"}</div>
+            </div>
+          </div>
+        ))
+      )}
     </>
   );
 }
@@ -239,27 +468,26 @@ function FinanceTab({ project }) {
   const budget = Number(project.budget) || 0;
   const spent = Number(project.spent) || 0;
   const remaining = budget - spent;
-  const pct = budget > 0 ? ((spent / budget) * 100).toFixed(1) : 0;
+
   return (
-    <div className="card">
-      {[
-        { label: "Budget", val: fmt(budget), color: "#3b82f6" },
-        { label: "Spent", val: fmt(spent), color: pct > 90 ? "#ef4444" : pct > 75 ? "#f59e0b" : "#f1f5f9" },
-        { label: "Remaining", val: fmt(remaining), color: remaining < 0 ? "#ef4444" : "#10b981" },
-        { label: "Burn Rate", val: `${pct}%`, color: "#94a3b8" },
-      ].map(r => (
-        <div key={r.label} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: "1px solid #334155" }}>
-          <span style={{ color: "#94a3b8", fontSize: 14 }}>{r.label}</span>
-          <span style={{ fontWeight: 700, fontSize: 15, color: r.color }}>{r.val}</span>
+    <>
+      <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Project Financials</h3>
+      <div className="card" style={{ marginBottom: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+          <span style={{ color: "#94a3b8", fontSize: 13 }}>Total Allocated Budget:</span>
+          <span style={{ fontWeight: 700, fontSize: 14 }}>{fmt(budget)}</span>
         </div>
-      ))}
-      <div style={{ marginTop: 16 }}>
-        <div style={{ fontSize: 12, color: "#64748b", marginBottom: 6 }}>Budget utilization</div>
-        <div className="progress-bar" style={{ height: 10 }}>
-          <div className="progress-fill" style={{ width: `${Math.min(100, pct)}%`, background: pct > 90 ? "#ef4444" : pct > 75 ? "#f59e0b" : "#3b82f6" }} />
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+          <span style={{ color: "#94a3b8", fontSize: 13 }}>Actual Expenses Logged:</span>
+          <span style={{ fontWeight: 700, fontSize: 14, color: "#38bdf8" }}>{fmt(spent)}</span>
         </div>
-        <div style={{ fontSize: 12, color: "#64748b", marginTop: 4, textAlign: "right" }}>{pct}% used</div>
+        <div style={{ borderTop: "1px solid #334155", paddingTop: 8, display: "flex", justifyContent: "space-between" }}>
+          <span style={{ color: "#f1f5f9", fontWeight: 700, fontSize: 13 }}>Remaining Funds:</span>
+          <span style={{ fontWeight: 800, fontSize: 15, color: remaining >= 0 ? "#10b981" : "#ef4444" }}>
+            {fmt(remaining)}
+          </span>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
