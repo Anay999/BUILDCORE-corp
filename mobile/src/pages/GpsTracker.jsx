@@ -73,6 +73,14 @@ function getManeuverIcon(type = "", modifier = "") {
   return "↑";
 }
 
+const DEFAULT_COMPANY_SITES = [
+  { id: 46, title: "lane east wing", location: "Ongole", latitude: 15.5057, longitude: 80.0499, status: "Ongoing" },
+  { id: 47, title: "hyderabad metro lane wing 2", location: "Hyderabad", latitude: 17.3850, longitude: 78.4867, status: "Planned" },
+  { id: 48, title: "RMK Campus Site Wing", location: "RMK Kavaraipettai", latitude: 13.3567, longitude: 80.1418, status: "Active" },
+  { id: 49, title: "Chennai Port Logistics Hub", location: "Chennai", latitude: 13.0827, longitude: 80.2707, status: "Active" },
+  { id: 50, title: "Bangalore Tech Park Block C", location: "Bangalore", latitude: 12.9716, longitude: 77.5946, status: "Active" },
+];
+
 export default function GpsTrackerPage() {
   const nav = useNavigate();
   const { user, showToast } = useApp();
@@ -84,8 +92,8 @@ export default function GpsTrackerPage() {
   const [headingAngle, setHeadingAngle] = useState(0);
   const [distance, setDistance] = useState(0);
   const [elapsed, setElapsed] = useState("00:00:00");
-  const [projects, setProjects] = useState([]);
-  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [projects, setProjects] = useState(DEFAULT_COMPANY_SITES);
+  const [selectedProjectId, setSelectedProjectId] = useState("46");
   const [autoSync, setAutoSync] = useState(true);
 
   // Preview Route info in standard mode
@@ -139,7 +147,10 @@ export default function GpsTrackerPage() {
       .then((res) => {
         if (Array.isArray(res) && res.length > 0) {
           setProjects(res);
-          setSelectedProjectId(String(res[0].id));
+          setSelectedProjectId((prev) => {
+            if (prev && res.some((p) => String(p.id) === String(prev))) return prev;
+            return String(res[0].id);
+          });
         }
       })
       .catch(() => {});
