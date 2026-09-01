@@ -3,6 +3,7 @@ const router  = express.Router();
 const jwt     = require("jsonwebtoken");
 const pool    = require("../config/db");
 const { createNotification } = require("./notificationRoutes");
+const { broadcast } = require("../utils/broadcast");
 
 const getUserId = (req) => {
   try {
@@ -72,6 +73,7 @@ router.post("/", async (req, res) => {
     if (assigned_to && assigned_to !== userId) {
       createNotification(assigned_to, "task", "Task assigned to you", title.trim(), "projects", project_id);
     }
+    broadcast("task_update", { action: "created", task: result.rows[0] });
     res.json(result.rows[0]);
   } catch (e) { console.log(e.message); res.status(500).json({ message: "Server error" }); }
 });
@@ -93,6 +95,7 @@ router.put("/:id/toggle", async (req, res) => {
        RETURNING *`,
       [nowCompleted, nowCompleted ? userId : null, req.params.id]
     );
+    broadcast("task_update", { action: "toggle", task: result.rows[0] });
     res.json(result.rows[0]);
   } catch (e) { console.log(e.message); res.status(500).json({ message: "Server error" }); }
 });
@@ -112,6 +115,7 @@ router.put("/:id/status", async (req, res) => {
        WHERE id=$4 RETURNING *`,
       [status, isDone, isDone ? userId : null, req.params.id]
     );
+    broadcast("task_update", { action: "status", task: result.rows[0] });
     res.json(result.rows[0]);
   } catch (e) { console.log(e.message); res.status(500).json({ message: "Server error" }); }
 });
@@ -124,6 +128,7 @@ router.delete("/:id", async (req, res) => {
   if (requester.rows[0]?.role !== "boss") return res.status(403).json({ message: "Only managers can delete tasks" });
   try {
     await pool.query(`DELETE FROM project_tasks WHERE id=$1`, [req.params.id]);
+    broadcast("task_update", { action: "deleted", id: req.params.id });
     res.json({ success: true });
   } catch (e) { console.log(e.message); res.status(500).json({ message: "Server error" }); }
 });

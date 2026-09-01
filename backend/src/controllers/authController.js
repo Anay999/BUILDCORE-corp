@@ -1,8 +1,7 @@
 const pool = require("../config/db");
-
 const bcrypt = require("bcryptjs");
-
 const jwt = require("jsonwebtoken");
+const { broadcast } = require("../utils/broadcast");
 
 // REGISTER
 const registerUser = async (
@@ -71,6 +70,8 @@ const registerUser = async (
           role,
         ]
       );
+
+    broadcast("user_update", { action: "registered", user: newUser.rows[0] });
 
     res.status(201).json({
 

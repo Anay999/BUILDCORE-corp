@@ -1840,6 +1840,15 @@ function App() {
           }
         } catch (_) {}
       });
+      sse.addEventListener("attendance_update", () => {
+        fetchRecentLogs();
+        fetchAllCompletedTasks();
+        fetchProjects();
+      });
+      sse.addEventListener("user_update", () => {
+        fetchUsers();
+        fetchFriends();
+      });
       sse.addEventListener("permissions_update", () => {
         fetchAndSyncPermissions().then(() => setSettingsRev(r => r + 1));
       });

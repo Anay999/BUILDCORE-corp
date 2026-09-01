@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const pool = require("../config/db");
 const jwt = require("jsonwebtoken");
+const { broadcast } = require("../utils/broadcast");
 
 pool.query(`
   CREATE TABLE IF NOT EXISTS attendance (
@@ -60,6 +61,7 @@ router.post("/clock-in", async (req, res) => {
        RETURNING *`,
       [project_id, user_id, date, autoStatus, now]
     );
+    broadcast("attendance_update", { action: "clock-in", project_id, user_id, status: autoStatus });
     res.json(r.rows[0]);
   } catch (e) { res.status(500).json({ message: e.message }); }
 });
@@ -77,6 +79,7 @@ router.post("/clock-out", async (req, res) => {
        RETURNING *`,
       [project_id, user_id, date, now]
     );
+    broadcast("attendance_update", { action: "clock-out", project_id, user_id });
     res.json(r.rows[0]);
   } catch (e) { res.status(500).json({ message: e.message }); }
 });
@@ -93,6 +96,7 @@ router.post("/", async (req, res) => {
        RETURNING *`,
       [project_id, user_id, d, status || "present", note || null]
     );
+    broadcast("attendance_update", { action: "mark", project_id, user_id, status: status || "present" });
     res.json(r.rows[0]);
   } catch (e) { res.status(500).json({ message: e.message }); }
 });
@@ -101,6 +105,7 @@ router.delete("/:id", async (req, res) => {
   if (!getUser(req)) return res.status(401).json({ message: "Unauthorized" });
   try {
     await pool.query("DELETE FROM attendance WHERE id=$1", [req.params.id]);
+    broadcast("attendance_update", { action: "delete", id: req.params.id });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ message: e.message }); }
 });
