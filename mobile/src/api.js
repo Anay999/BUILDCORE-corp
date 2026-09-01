@@ -1,19 +1,11 @@
-// API helper — points to backend with smart auto-detection (Same WiFi + Hotspot + Cloud 5G)
-const CANDIDATE_URLS = [
-  "http://192.168.1.71:5000/api",   // Wi-Fi LAN IP
-  "http://192.168.137.73:5000/api", // Mobile Hotspot IP
-  "https://buildcore-anay-live.loca.lt/api", // Cloud Tunnel
-  "http://10.0.2.2:5000/api",       // Android Emulator Loopback
-  "http://localhost:5000/api",      // Local Web Loopback
-];
-
-const DEFAULT_LOCAL_URL = "http://192.168.1.71:5000/api";
-const DEFAULT_TUNNEL_URL = "https://buildcore-anay-live.loca.lt/api";
+// BuildCore Unified API Client
+const PRIMARY_URL = "https://buildcore-anay-live.loca.lt/api";
+const LOCAL_URL = "http://192.168.1.71:5000/api";
 
 export function getApiBaseUrl() {
   const custom = localStorage.getItem("bc_api_url");
   if (custom) return custom.replace(/\/+$/, "");
-  return DEFAULT_LOCAL_URL;
+  return PRIMARY_URL;
 }
 
 export function setApiBaseUrl(url) {
@@ -25,123 +17,99 @@ function getToken() {
   return localStorage.getItem("bc_token") || "";
 }
 
-function headers(extra = {}) {
-  const t = getToken();
+function getHeaders(extra = {}) {
+  const token = getToken();
   return {
     "Content-Type": "application/json",
     "Bypass-Tunnel-Reminder": "true",
     "bypass-tunnel-reminder": "true",
     "ngrok-skip-browser-warning": "true",
-    ...(t ? { Authorization: `Bearer ${t}` } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...extra,
   };
 }
 
-async function tryFetch(base, path, opts = {}, timeoutMs = 3000) {
+async function doFetch(baseUrl, path, options = {}, timeoutMs = 8000) {
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
-  const url = path.startsWith("http") ? path : `${base}${cleanPath}`;
+  const url = path.startsWith("http") ? path : `${baseUrl}${cleanPath}`;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-  const mergedHeaders = {
-    "Bypass-Tunnel-Reminder": "true",
-    "bypass-tunnel-reminder": "true",
-    "ngrok-skip-browser-warning": "true",
-    ...(opts.headers || {}),
-  };
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const res = await fetch(url, {
-      ...opts,
-      headers: mergedHeaders,
+      ...options,
+      headers: getHeaders(options.headers || {}),
       signal: controller.signal,
     });
-    clearTimeout(timeoutId);
+    clearTimeout(timer);
     return res;
   } catch (err) {
-    clearTimeout(timeoutId);
+    clearTimeout(timer);
     throw err;
   }
 }
 
-async function req(method, path, body) {
-  const opts = { method, headers: headers() };
-  if (body !== undefined) opts.body = JSON.stringify(body);
-  const primaryBase = getApiBaseUrl();
+async function request(method, path, body) {
+  const options = { method };
+  if (body !== undefined) options.body = JSON.stringify(body);
 
+  const activeUrl = getApiBaseUrl();
   let res;
+
   try {
-    res = await tryFetch(primaryBase, path, opts, 3500);
+    res = await doFetch(activeUrl, path, options, 6000);
   } catch {
-    // Fast parallel probe across all candidates
-    let found = false;
-    const candidates = CANDIDATE_URLS.filter((u) => u !== primaryBase);
-
-    for (const altUrl of candidates) {
-      try {
-        res = await tryFetch(altUrl, path, opts, 2500);
-        setApiBaseUrl(altUrl);
-        found = true;
-        break;
-      } catch {}
-    }
-
-    if (!found) {
-      throw new Error("Unable to reach backend. Tap '📶 Wi-Fi (1.71)' or check laptop server.");
+    // If primary URL is unreachable, try secondary URL
+    const fallbackUrl = activeUrl === PRIMARY_URL ? LOCAL_URL : PRIMARY_URL;
+    try {
+      res = await doFetch(fallbackUrl, path, options, 4000);
+      setApiBaseUrl(fallbackUrl);
+    } catch {
+      throw new Error("Cannot reach server. Run 'npm start' and 'localtunnel' in terminal.");
     }
   }
 
-  const ct = res.headers.get("content-type") || "";
-  if (ct.includes("application/json")) {
+  const contentType = res.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) {
     const data = await res.json();
-    if (!res.ok) throw new Error(data?.error || data?.message || `HTTP ${res.status}`);
+    if (!res.ok) throw new Error(data?.error || data?.message || `Error ${res.status}`);
     return data;
   }
 
   const text = await res.text();
-  if (text.includes("localtunnel") || text.includes("Tunnel Reminder")) {
-    throw new Error("Tunnel reminder page intercepted — reconnecting...");
-  }
-  if (!res.ok) throw new Error(`HTTP ${res.status}: ${text.slice(0, 100)}`);
+  if (!res.ok) throw new Error(`Error ${res.status}: ${text.slice(0, 80)}`);
   return text;
 }
 
 export const api = {
-  get: (path) => req("GET", path),
-  post: (path, body) => req("POST", path, body),
-  put: (path, body) => req("PUT", path, body),
-  patch: (path, body) => req("PATCH", path, body),
-  delete: (path) => req("DELETE", path),
+  get: (path) => request("GET", path),
+  post: (path, body) => request("POST", path, body),
+  put: (path, body) => request("PUT", path, body),
+  patch: (path, body) => request("PATCH", path, body),
+  delete: (path) => request("DELETE", path),
   upload: async (path, formData) => {
-    const t = getToken();
-    const opts = {
+    const token = getToken();
+    const options = {
       method: "POST",
       headers: {
         "Bypass-Tunnel-Reminder": "true",
         "bypass-tunnel-reminder": "true",
-        "ngrok-skip-browser-warning": "true",
-        ...(t ? { Authorization: `Bearer ${t}` } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: formData,
     };
-    const primaryBase = getApiBaseUrl();
+    const activeUrl = getApiBaseUrl();
     let res;
     try {
-      res = await tryFetch(primaryBase, path, opts, 6000);
+      res = await doFetch(activeUrl, path, options, 12000);
     } catch {
-      for (const altUrl of CANDIDATE_URLS) {
-        if (altUrl === primaryBase) continue;
-        try {
-          res = await tryFetch(altUrl, path, opts, 4000);
-          setApiBaseUrl(altUrl);
-          break;
-        } catch {}
-      }
+      const fallbackUrl = activeUrl === PRIMARY_URL ? LOCAL_URL : PRIMARY_URL;
+      res = await doFetch(fallbackUrl, path, options, 8000);
     }
-    const ct = res.headers.get("content-type") || "";
-    if (ct.includes("application/json")) {
+    const contentType = res.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || data?.message || `HTTP ${res.status}`);
+      if (!res.ok) throw new Error(data?.error || data?.message || `Error ${res.status}`);
       return data;
     }
     return res.text();
@@ -151,7 +119,7 @@ export const api = {
 export function fmt(n) {
   const num = Number(n || 0);
   if (num >= 1_00_00_000) return "₹" + (num / 1_00_00_000).toFixed(1) + "Cr";
-  if (num >= 1_00_000) return "₹" + (num / 1_00_000).toFixed(1) + "L";
+  if (num >= 1_00_000) return "₹" + (num / 1_00_00_000).toFixed(1) + "L";
   if (num >= 1_000) return "₹" + (num / 1_000).toFixed(1) + "K";
   return "₹" + num.toLocaleString("en-IN");
 }
