@@ -78,9 +78,11 @@ export default function DashboardPage() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
               {[
                 { label: "GPS Tracker", icon: <Ic.MapPin s={20} />, path: "/gps", color: "#38bdf8" },
+                { label: "Team Chat", icon: <Ic.MessageSquare s={20} />, path: "/chat", color: "#6366f1" },
                 { label: "Log DSR", icon: <Ic.ClipboardList s={20} />, path: "/dsr", color: "#3b82f6" },
                 { label: "New Issue", icon: <Ic.AlertTriangle s={20} />, path: "/issues", color: "#ef4444" },
                 { label: "Attendance", icon: <Ic.Users s={20} />, path: "/attendance", color: "#10b981" },
+                { label: "Projects", icon: <Ic.FolderOpen s={20} />, path: "/projects", color: "#f59e0b" },
               ].map(a => (
                 <button key={a.path} className="card card-sm" style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", border: "none", textAlign: "left", width: "100%" }} onClick={() => nav(a.path)}>
                   <div style={{ width: 38, height: 38, borderRadius: 10, background: a.color + "22", color: a.color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>

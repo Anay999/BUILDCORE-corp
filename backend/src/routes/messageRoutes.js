@@ -49,8 +49,15 @@ router.post("/", async (req, res) => {
        RETURNING id, sender_id, receiver_id, content, created_at`,
       [senderId, receiver_id, content.trim()]
     );
-    const msg = result.rows[0];
-    eventsRouter.broadcast("chat_message", { friend_id: receiver_id, sender_id: senderId, msg });
+    const senderRow = await pool.query(`SELECT name FROM users WHERE id=$1`, [senderId]);
+    const senderName = senderRow.rows[0]?.name || "Team Member";
+    eventsRouter.broadcast("chat_message", {
+      friend_id: receiver_id,
+      sender_id: senderId,
+      sender_name: senderName,
+      preview: content.trim().slice(0, 40),
+      msg,
+    });
     res.json(msg);
   } catch (e) { console.log(e.message); res.status(500).json({ message: "Server error" }); }
 });

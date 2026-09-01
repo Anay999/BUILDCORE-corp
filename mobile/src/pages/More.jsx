@@ -7,9 +7,11 @@ const MENU = [
     group: "Field Operations",
     items: [
       { label: "Live GPS Tracker", path: "/gps", icon: <Ic.MapPin s={20} />, color: "#38bdf8" },
+      { label: "Team Chat & DMs", path: "/chat", icon: <Ic.MessageSquare s={20} />, color: "#3b82f6" },
       { label: "Tasks", path: "/tasks", icon: <Ic.List s={20} />, color: "#3b82f6" },
       { label: "Issues", path: "/issues", icon: <Ic.AlertTriangle s={20} />, color: "#ef4444" },
       { label: "Attendance", path: "/attendance", icon: <Ic.Users s={20} />, color: "#10b981" },
+      { label: "Alerts & Notifications", path: "/alerts", icon: <Ic.Bell s={20} />, color: "#f59e0b" },
       { label: "Time Log", path: "/timelog", icon: <Ic.Clock s={20} />, color: "#8b5cf6" },
     ],
   },

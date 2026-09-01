@@ -61,6 +61,8 @@ router.get("/requests/outgoing", async (req, res) => {
   } catch (e) { console.log(e.message); res.status(500).json({ message: "Server error" }); }
 });
 
+const eventsRouter = require("./eventsRoutes");
+
 // POST /api/friends/request — send a friend request
 router.post("/request", async (req, res) => {
   const senderId = getUserId(req);
@@ -79,6 +81,7 @@ router.post("/request", async (req, res) => {
       `INSERT INTO friend_requests (sender_id, receiver_id, status) VALUES ($1, $2, 'pending') RETURNING *`,
       [senderId, receiver_id]
     );
+    eventsRouter.broadcast("friend_update", { action: "request", sender_id: senderId, receiver_id });
     res.json(result.rows[0]);
   } catch (e) { console.log(e.message); res.status(500).json({ message: "Server error" }); }
 });
@@ -93,6 +96,7 @@ router.put("/requests/:id/accept", async (req, res) => {
       [req.params.id, userId]
     );
     if (!result.rows[0]) return res.status(404).json({ message: "Request not found" });
+    eventsRouter.broadcast("friend_update", { action: "accept", request_id: req.params.id, receiver_id: userId, sender_id: result.rows[0].sender_id });
     res.json(result.rows[0]);
   } catch (e) { console.log(e.message); res.status(500).json({ message: "Server error" }); }
 });
@@ -106,6 +110,7 @@ router.put("/requests/:id/decline", async (req, res) => {
       `UPDATE friend_requests SET status='declined' WHERE id=$1 AND receiver_id=$2`,
       [req.params.id, userId]
     );
+    eventsRouter.broadcast("friend_update", { action: "decline", request_id: req.params.id, receiver_id: userId });
     res.json({ success: true });
   } catch (e) { console.log(e.message); res.status(500).json({ message: "Server error" }); }
 });

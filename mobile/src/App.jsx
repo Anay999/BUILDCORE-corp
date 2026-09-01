@@ -27,6 +27,7 @@ import InventoryPage from "./pages/Inventory.jsx";
 import SettingsPage from "./pages/Settings.jsx";
 import MorePage from "./pages/More.jsx";
 import GpsTrackerPage from "./pages/GpsTracker.jsx";
+import ChatPage from "./pages/Chat.jsx";
 
 // ─── Bottom Navigation ───────────────────────────────────────────────────────
 function BottomNav() {
@@ -37,8 +38,8 @@ function BottomNav() {
   const tabs = [
     { path: "/", icon: <Ic.Home s={22} />, label: "Home" },
     { path: "/projects", icon: <Ic.FolderOpen s={22} />, label: "Projects" },
+    { path: "/chat", icon: <Ic.MessageSquare s={22} />, label: "Chat" },
     { path: "/dsr", icon: <Ic.ClipboardList s={22} />, label: "DSR" },
-    { path: "/alerts", icon: <Ic.Bell s={22} />, label: "Alerts" },
     { path: "/more", icon: <Ic.Grid s={22} />, label: "More" },
   ];
 
@@ -110,6 +111,7 @@ export default function App() {
             <Route path="/" element={<Shell><DashboardPage /></Shell>} />
             <Route path="/projects" element={<Shell><ProjectsPage /></Shell>} />
             <Route path="/projects/:id" element={<Shell><ProjectDetailPage /></Shell>} />
+            <Route path="/chat" element={<Shell><ChatPage /></Shell>} />
             <Route path="/tasks" element={<Shell><TasksPage /></Shell>} />
             <Route path="/dsr" element={<Shell><DSRPage /></Shell>} />
             <Route path="/issues" element={<Shell><IssuesPage /></Shell>} />
