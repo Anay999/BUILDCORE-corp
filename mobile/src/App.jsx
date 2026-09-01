@@ -28,6 +28,11 @@ import SettingsPage from "./pages/Settings.jsx";
 import MorePage from "./pages/More.jsx";
 import GpsTrackerPage from "./pages/GpsTracker.jsx";
 import ChatPage from "./pages/Chat.jsx";
+import TeamPage from "./pages/Team.jsx";
+import AiAnalysisPage from "./pages/AiAnalysis.jsx";
+import ReportsPage from "./pages/Reports.jsx";
+import ActivityPage from "./pages/Activity.jsx";
+import ClientRequestsPage from "./pages/ClientRequests.jsx";
 
 // ─── Bottom Navigation ───────────────────────────────────────────────────────
 function BottomNav() {
@@ -127,6 +132,11 @@ export default function App() {
             <Route path="/payroll" element={<Shell><PayrollPage /></Shell>} />
             <Route path="/requisitions" element={<Shell><RequisitionsPage /></Shell>} />
             <Route path="/alerts" element={<Shell><AlertsPage /></Shell>} />
+            <Route path="/team" element={<Shell><TeamPage /></Shell>} />
+            <Route path="/ai-analysis" element={<Shell><AiAnalysisPage /></Shell>} />
+            <Route path="/reports" element={<Shell><ReportsPage /></Shell>} />
+            <Route path="/activity" element={<Shell><ActivityPage /></Shell>} />
+            <Route path="/client-requests" element={<Shell><ClientRequestsPage /></Shell>} />
             <Route path="/settings" element={<Shell><SettingsPage /></Shell>} />
             <Route path="/gps" element={<Shell><GpsTrackerPage /></Shell>} />
             <Route path="/more" element={<Shell><MorePage /></Shell>} />

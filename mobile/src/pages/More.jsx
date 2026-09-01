@@ -4,19 +4,29 @@ import { Ic } from "../context.jsx";
 
 const MENU = [
   {
-    group: "Field Operations",
+    group: "Field Operations & Intelligence",
     items: [
       { label: "Live GPS Tracker", path: "/gps", icon: <Ic.MapPin s={20} />, color: "#38bdf8" },
+      { label: "AI Site Intelligence", path: "/ai-analysis", icon: <Ic.Zap s={20} />, color: "#8b5cf6" },
       { label: "Team Chat & DMs", path: "/chat", icon: <Ic.MessageSquare s={20} />, color: "#3b82f6" },
       { label: "Tasks", path: "/tasks", icon: <Ic.List s={20} />, color: "#3b82f6" },
-      { label: "Issues", path: "/issues", icon: <Ic.AlertTriangle s={20} />, color: "#ef4444" },
+      { label: "Issues & Defects", path: "/issues", icon: <Ic.AlertTriangle s={20} />, color: "#ef4444" },
       { label: "Attendance", path: "/attendance", icon: <Ic.Users s={20} />, color: "#10b981" },
-      { label: "Alerts & Notifications", path: "/alerts", icon: <Ic.Bell s={20} />, color: "#f59e0b" },
       { label: "Time Log", path: "/timelog", icon: <Ic.Clock s={20} />, color: "#8b5cf6" },
+      { label: "Live Activity Audit", path: "/activity", icon: <Ic.TrendingUp s={20} />, color: "#f59e0b" },
     ],
   },
   {
-    group: "Procurement",
+    group: "Workforce & Management",
+    items: [
+      { label: "Team & Workforce", path: "/team", icon: <Ic.Users s={20} />, color: "#38bdf8" },
+      { label: "Reports & Analytics", path: "/reports", icon: <Ic.BarChart s={20} />, color: "#10b981" },
+      { label: "Client Requests", path: "/client-requests", icon: <Ic.Archive s={20} />, color: "#ec4899" },
+      { label: "Alerts & Notices", path: "/alerts", icon: <Ic.Bell s={20} />, color: "#f59e0b" },
+    ],
+  },
+  {
+    group: "Procurement & Contracts",
     items: [
       { label: "Purchase Orders", path: "/pos", icon: <Ic.ShoppingCart s={20} />, color: "#f59e0b" },
       { label: "Requisitions", path: "/requisitions", icon: <Ic.Archive s={20} />, color: "#f97316" },
@@ -26,7 +36,7 @@ const MENU = [
     ],
   },
   {
-    group: "Resources",
+    group: "Resources & Inventory",
     items: [
       { label: "Materials", path: "/materials", icon: <Ic.Package s={20} />, color: "#84cc16" },
       { label: "Inventory", path: "/inventory", icon: <Ic.Layers s={20} />, color: "#14b8a6" },
@@ -40,7 +50,7 @@ const MENU = [
     ],
   },
   {
-    group: "Account",
+    group: "Account & Preferences",
     items: [
       { label: "Settings", path: "/settings", icon: <Ic.Settings s={20} />, color: "#64748b" },
     ],
@@ -53,20 +63,55 @@ export default function MorePage() {
   return (
     <>
       <div className="top-bar">
-        <h1>More</h1>
+        <h1>All Enterprise Modules</h1>
       </div>
 
       <div className="page-content">
-        {MENU.map(section => (
+        {MENU.map((section) => (
           <div key={section.group} style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 8 }}>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: "#64748b",
+                textTransform: "uppercase",
+                letterSpacing: ".06em",
+                marginBottom: 8,
+              }}
+            >
               {section.group}
             </div>
             <div className="card" style={{ padding: 0 }}>
               {section.items.map((item, i) => (
-                <button key={item.path} onClick={() => nav(item.path)}
-                  style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", width: "100%", background: "none", border: "none", cursor: "pointer", borderBottom: i < section.items.length - 1 ? "1px solid #334155" : "none", textAlign: "left" }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 12, background: item.color + "22", color: item.color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <button
+                  key={item.path}
+                  onClick={() => nav(item.path)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 14,
+                    padding: "14px 16px",
+                    width: "100%",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    borderBottom: i < section.items.length - 1 ? "1px solid #334155" : "none",
+                    textAlign: "left",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 12,
+                      background: item.color + "22",
+                      color: item.color,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
                     {item.icon}
                   </div>
                   <div style={{ flex: 1, fontWeight: 700, fontSize: 15, color: "#f1f5f9" }}>{item.label}</div>
@@ -76,7 +121,7 @@ export default function MorePage() {
             </div>
           </div>
         ))}
-        <div style={{ height: 8 }} />
+        <div style={{ height: 16 }} />
       </div>
     </>
   );
