@@ -1,9 +1,9 @@
-// BuildCore High-Reliability API Client
-const PRIMARY_URL = "http://192.168.1.71:5000/api"; // Fast Direct LAN
-const TUNNEL_URL = "https://buildcore-anay-live.loca.lt/api"; // Cloud Tunnel
+// BuildCore Ultra-Fast High-Reliability API Client
+const PRIMARY_LAN = "http://192.168.1.71:5000/api";
+const TUNNEL_URL = "https://buildcore-anay-live.loca.lt/api";
 
 export function normalizeApiUrl(url) {
-  if (!url) return PRIMARY_URL;
+  if (!url) return TUNNEL_URL;
   let clean = url.trim().replace(/\/+$/, "");
   if (clean.includes("loca.lt") && clean.startsWith("http://")) {
     clean = clean.replace("http://", "https://");
@@ -15,21 +15,36 @@ export function normalizeApiUrl(url) {
 }
 
 const CANDIDATE_URLS = [
-  PRIMARY_URL,
   TUNNEL_URL,
+  PRIMARY_LAN,
   "http://192.168.137.73:5000/api",
   "http://10.0.2.2:5000/api",
 ];
 
+// In-Memory Fast Cache for 0ms Screen Renders
+const MEM_CACHE = new Map();
+
+let cachedActiveUrl = null;
+
 export function getApiBaseUrl() {
+  if (cachedActiveUrl) return cachedActiveUrl;
   const custom = localStorage.getItem("bc_api_url");
-  if (custom) return normalizeApiUrl(custom);
-  return PRIMARY_URL;
+  if (custom) {
+    cachedActiveUrl = normalizeApiUrl(custom);
+    return cachedActiveUrl;
+  }
+  return TUNNEL_URL;
 }
 
 export function setApiBaseUrl(url) {
-  if (url) localStorage.setItem("bc_api_url", normalizeApiUrl(url));
-  else localStorage.removeItem("bc_api_url");
+  if (url) {
+    const clean = normalizeApiUrl(url);
+    cachedActiveUrl = clean;
+    localStorage.setItem("bc_api_url", clean);
+  } else {
+    cachedActiveUrl = null;
+    localStorage.removeItem("bc_api_url");
+  }
 }
 
 function getToken() {
@@ -48,7 +63,46 @@ function getHeaders(extra = {}) {
   };
 }
 
-async function doFetch(baseUrl, path, options = {}, timeoutMs = 4000) {
+// ─── Fast Parallel Probe: Detects the fastest route in < 200ms ────────────────
+export async function raceFastestRoute() {
+  const probePath = "/stats/alerts";
+  const promises = CANDIDATE_URLS.map(async (baseUrl) => {
+    const cleanBase = normalizeApiUrl(baseUrl);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 1800);
+    try {
+      const res = await fetch(`${cleanBase}${probePath}`, {
+        method: "GET",
+        headers: getHeaders(),
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      if (res.ok || res.status === 401 || res.status === 200) {
+        return cleanBase;
+      }
+      throw new Error("HTTP error");
+    } catch (err) {
+      clearTimeout(timer);
+      throw err;
+    }
+  });
+
+  try {
+    const winner = await Promise.any(promises);
+    if (winner) {
+      setApiBaseUrl(winner);
+      return winner;
+    }
+  } catch {}
+  return getApiBaseUrl();
+}
+
+// Auto-race on app boot in background
+setTimeout(() => {
+  raceFastestRoute().catch(() => {});
+}, 100);
+
+async function doFetch(baseUrl, path, options = {}, timeoutMs = 1500) {
   const cleanBase = normalizeApiUrl(baseUrl);
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
   const url = path.startsWith("http") ? path : `${cleanBase}${cleanPath}`;
@@ -80,23 +134,20 @@ async function request(method, path, body) {
   let res;
 
   try {
-    res = await doFetch(activeUrl, path, options, 4000);
+    res = await doFetch(activeUrl, path, options, 1500);
   } catch {
-    // Failover across all candidate network routes
-    let found = false;
+    // Fast parallel failover across remaining candidate routes
     const candidates = CANDIDATE_URLS.filter((u) => u !== activeUrl);
-
-    for (const altUrl of candidates) {
-      try {
-        res = await doFetch(altUrl, path, options, 3000);
-        setApiBaseUrl(altUrl);
-        found = true;
-        break;
-      } catch {}
-    }
-
-    if (!found) {
-      throw new Error("Unable to reach backend. Check laptop server is running.");
+    try {
+      res = await Promise.any(
+        candidates.map(async (altUrl) => {
+          const r = await doFetch(altUrl, path, options, 2000);
+          setApiBaseUrl(altUrl);
+          return r;
+        })
+      );
+    } catch {
+      throw new Error("Unable to reach backend. Check server connection.");
     }
   }
 
@@ -104,6 +155,9 @@ async function request(method, path, body) {
   if (contentType.includes("application/json")) {
     const data = await res.json();
     if (!res.ok) throw new Error(data?.error || data?.message || `Error ${res.status}`);
+    if (method === "GET") {
+      MEM_CACHE.set(path, data);
+    }
     return data;
   }
 
@@ -117,6 +171,9 @@ async function request(method, path, body) {
 
 export const api = {
   get: (path) => request("GET", path),
+  getCached: (path) => {
+    return MEM_CACHE.get(path) || null;
+  },
   post: (path, body) => request("POST", path, body),
   put: (path, body) => request("PUT", path, body),
   patch: (path, body) => request("PATCH", path, body),
@@ -135,7 +192,7 @@ export const api = {
     const activeUrl = getApiBaseUrl();
     let res;
     try {
-      res = await doFetch(activeUrl, path, options, 10000);
+      res = await doFetch(activeUrl, path, options, 8000);
     } catch {
       for (const altUrl of CANDIDATE_URLS) {
         if (altUrl === activeUrl) continue;

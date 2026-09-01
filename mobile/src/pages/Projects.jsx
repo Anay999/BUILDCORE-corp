@@ -16,10 +16,10 @@ const FILTERS = ["All", "Ongoing", "Planned", "Delayed", "Completed", "On Hold"]
 export default function ProjectsPage() {
   const nav = useNavigate();
   const { showToast } = useApp();
-  const [projects, setProjects] = useState([]);
+  const [projects, setProjects] = useState(() => api.getCached("/projects") || []);
   const [filter, setFilter] = useState("All");
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   // New Project Modal State
   const [showModal, setShowModal] = useState(false);

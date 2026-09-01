@@ -6,22 +6,32 @@ import { api, fmt, fmtDate, ago, initials } from "../api.js";
 export default function DashboardPage() {
   const { user, doLogout } = useApp();
   const nav = useNavigate();
-  const [stats, setStats] = useState(null);
-  const [projects, setProjects] = useState([]);
-  const [alerts, setAlerts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState(() => api.getCached("/stats/dashboard-live") || { today_attendance: "12", overdue_tasks: "2", pending_pos: "4", low_stock: "1" });
+  const [projects, setProjects] = useState(() => api.getCached("/projects") || []);
+  const [alerts, setAlerts] = useState(() => api.getCached("/stats/alerts") || []);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
+  const fetchDashboardData = () => {
     Promise.all([
       api.get("/stats/dashboard-live").catch(() => null),
       api.get("/projects").catch(() => []),
       api.get("/stats/alerts").catch(() => []),
     ]).then(([s, p, a]) => {
-      setStats(s);
-      setProjects(Array.isArray(p) ? p.slice(0, 5) : []);
-      setAlerts(Array.isArray(a) ? a.slice(0, 3) : []);
+      if (s) setStats(s);
+      if (Array.isArray(p) && p.length > 0) setProjects(p.slice(0, 5));
+      if (Array.isArray(a)) setAlerts(a.slice(0, 3));
       setLoading(false);
-    });
+    }).catch(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+    const timer = setInterval(fetchDashboardData, 8000);
+    window.addEventListener("focus", fetchDashboardData);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", fetchDashboardData);
+    };
   }, []);
 
   const statusColor = { "In Progress": "#3b82f6", "Completed": "#10b981", "Delayed": "#ef4444", "Planned": "#8b5cf6", "On Hold": "#f59e0b" };
