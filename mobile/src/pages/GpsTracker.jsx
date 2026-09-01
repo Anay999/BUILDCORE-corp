@@ -724,12 +724,122 @@ export default function GpsTrackerPage() {
     showToast(`Navigation Ended (Duration: ${navElapsed})`, "info");
   };
 
+  const [isHeadingUp, setIsHeadingUp] = useState(true);
+  const [isOverviewMode, setIsOverviewMode] = useState(false);
+  const [showReportSheet, setShowReportSheet] = useState(false);
+  const [showStepsSheet, setShowStepsSheet] = useState(false);
+  const [mapLayerType, setMapLayerType] = useState("streets");
+  const tileLayerRef = useRef(null);
+
+  // ─── Camera Re-center & Orientation Control ──────────────────────────────────
   const reCenterMap = () => {
     setIsAutoCentered(true);
+    setIsOverviewMode(false);
+    setIsHeadingUp(true);
     if (mapRef.current && coords) {
       try {
-        mapRef.current.panTo([coords.latitude, coords.longitude], { animate: false });
+        mapRef.current.setView([coords.latitude, coords.longitude], 17, { animate: true });
+        showToast("⌖ Re-centred camera to your location", "info", 2000);
       } catch {}
+    }
+  };
+
+  const toggleCompass = () => {
+    const next = !isHeadingUp;
+    setIsHeadingUp(next);
+    showToast(next ? "🧭 Heading-Up Mode (Camera tracks driving direction)" : "🧭 North-Up Mode (Fixed Map)", "info", 2000);
+    if (coords && mapRef.current) {
+      mapRef.current.setView([coords.latitude, coords.longitude], 17, { animate: true });
+    }
+  };
+
+  const toggleOverview = () => {
+    const map = mapRef.current;
+    const routeLayer = routeLayerGroupRef.current;
+    if (!map) return;
+
+    if (!isOverviewMode && routeLayer && routeLayer.getLayers().length > 0) {
+      try {
+        const bounds = routeLayer.getBounds();
+        if (bounds.isValid()) {
+          map.fitBounds(bounds, { padding: [60, 60], animate: true });
+          setIsOverviewMode(true);
+          setIsAutoCentered(false);
+          showToast("🔍 Showing full route overview", "info", 2000);
+          return;
+        }
+      } catch {}
+    }
+
+    reCenterMap();
+  };
+
+  const toggleMapLayer = () => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (tileLayerRef.current) {
+      map.removeLayer(tileLayerRef.current);
+    }
+    if (mapLayerType === "streets") {
+      const satTile = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+        maxZoom: 19,
+      }).addTo(map);
+      tileLayerRef.current = satTile;
+      setMapLayerType("satellite");
+      showToast("🛰️ Switched to High-Resolution Satellite View", "info", 2000);
+    } else {
+      const streetsTile = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+      }).addTo(map);
+      tileLayerRef.current = streetsTile;
+      setMapLayerType("streets");
+      showToast("🗺️ Switched to Clean Street Map", "info", 2000);
+    }
+  };
+
+  const speakCurrentInstruction = () => {
+    if (isMuted) {
+      setIsMuted(false);
+      showToast("🔊 Voice guidance unmuted", "info", 2000);
+    }
+    const distText = remainingDist > 1000 ? `${(remainingDist / 1000).toFixed(1)} kilometers` : `${Math.round(remainingDist)} meters`;
+    const stepName = activeStep?.name || destination?.title || "destination site";
+    const speechText = `In ${distText}, continue towards ${stepName}.`;
+
+    try {
+      if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(speechText);
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        window.speechSynthesis.speak(utterance);
+      }
+    } catch {}
+  };
+
+  const toggleMute = () => {
+    if (isMuted) {
+      setIsMuted(false);
+      showToast("🔊 Voice guidance unmuted", "info", 2000);
+      speakCurrentInstruction();
+    } else {
+      setIsMuted(true);
+      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+      showToast("🔇 Voice guidance muted", "info", 2000);
+    }
+  };
+
+  const handleReportHazard = (type, label) => {
+    setShowReportSheet(false);
+    showToast(`Hazard reported: ${label} ⚠️ Site dispatch notified.`, "success", 3500);
+    if (destination?.projectId) {
+      api.post("/issues", {
+        project_id: destination.projectId,
+        title: `Road Alert: ${label}`,
+        description: `Hazard reported during transit near ${destination.title}`,
+        category: "Safety",
+        priority: "medium",
+      }).catch(() => {});
     }
   };
 
@@ -807,23 +917,26 @@ export default function GpsTrackerPage() {
                 </div>
               </div>
 
-              <div
+              <button
+                onClick={toggleMapLayer}
                 style={{
                   width: 40,
                   height: 40,
                   borderRadius: "50%",
                   background: "#ffffff",
                   color: "#004d40",
+                  border: "none",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontSize: 20,
+                  fontSize: 18,
                   boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
                   flexShrink: 0,
+                  cursor: "pointer",
                 }}
               >
                 ✦
-              </div>
+              </button>
             </div>
 
             <div
@@ -897,35 +1010,37 @@ export default function GpsTrackerPage() {
               pointerEvents: "auto",
             }}
           >
+            {/* 1. Compass / Heading Follow Toggle */}
             <button
-              onClick={() => {
-                if (mapRef.current && coords) mapRef.current.panTo([coords.latitude, coords.longitude], { animate: false });
-              }}
+              onClick={toggleCompass}
               style={{
                 width: 46,
                 height: 46,
                 borderRadius: "50%",
                 background: "#ffffff",
-                border: "none",
+                border: isHeadingUp ? "2px solid #004d40" : "none",
                 boxShadow: "0 3px 12px rgba(0,0,0,0.25)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: 18,
+                fontSize: 20,
                 cursor: "pointer",
+                transform: isHeadingUp ? "rotate(0deg)" : `rotate(${-headingAngle}deg)`,
+                transition: "transform 0.3s ease",
               }}
             >
               🧭
             </button>
 
+            {/* 2. Route Overview / Zoom In Toggle */}
             <button
-              onClick={() => showToast("Searching site route amenities", "info")}
+              onClick={toggleOverview}
               style={{
                 width: 46,
                 height: 46,
                 borderRadius: "50%",
                 background: "#ffffff",
-                border: "none",
+                border: isOverviewMode ? "2px solid #004d40" : "none",
                 boxShadow: "0 3px 12px rgba(0,0,0,0.25)",
                 display: "flex",
                 alignItems: "center",
@@ -938,11 +1053,9 @@ export default function GpsTrackerPage() {
               🔍
             </button>
 
+            {/* 3. Voice Guidance Announcement & Mute Toggle */}
             <button
-              onClick={() => {
-                setIsMuted(!isMuted);
-                showToast(isMuted ? "Voice guidance unmuted 🔊" : "Voice guidance muted 🔇", "info");
-              }}
+              onClick={toggleMute}
               style={{
                 width: 46,
                 height: 46,
@@ -976,6 +1089,7 @@ export default function GpsTrackerPage() {
               pointerEvents: "none",
             }}
           >
+            {/* Re-centre Button */}
             <button
               onClick={reCenterMap}
               style={{
@@ -997,8 +1111,9 @@ export default function GpsTrackerPage() {
               <span style={{ color: "#00875a", fontSize: 16 }}>⌖</span> Re-centre
             </button>
 
+            {/* Report Road / Hazard Button */}
             <button
-              onClick={() => showToast("Site attendance log updated ⚠️", "info")}
+              onClick={() => setShowReportSheet(true)}
               style={{
                 pointerEvents: "auto",
                 background: "#ffffff",
@@ -1042,6 +1157,7 @@ export default function GpsTrackerPage() {
             <div style={{ width: 36, height: 4, borderRadius: 2, background: "#cbd5e1", margin: "0 auto" }} />
 
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              {/* Exit Navigation */}
               <button
                 onClick={stopNavigation}
                 style={{
@@ -1062,7 +1178,7 @@ export default function GpsTrackerPage() {
                 ✕
               </button>
 
-              <div style={{ textAlign: "center" }}>
+              <div style={{ textAlign: "center" }} onClick={speakCurrentInstruction}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
                   <span style={{ fontSize: 28, fontWeight: 900, color: "#16a34a" }}>
                     {remainingMin} min
@@ -1074,8 +1190,9 @@ export default function GpsTrackerPage() {
                 </div>
               </div>
 
+              {/* Maneuver Steps List */}
               <button
-                onClick={() => showToast("Alternative site route active", "info")}
+                onClick={() => setShowStepsSheet(true)}
                 style={{
                   width: 48,
                   height: 48,
@@ -1095,6 +1212,139 @@ export default function GpsTrackerPage() {
               </button>
             </div>
           </div>
+
+          {/* REPORT HAZARD BOTTOM SHEET MODAL */}
+          {showReportSheet && (
+            <div
+              style={{
+                position: "fixed",
+                inset: 0,
+                zIndex: 2000,
+                background: "rgba(0,0,0,0.65)",
+                display: "flex",
+                alignItems: "flex-end",
+                pointerEvents: "auto",
+              }}
+              onClick={(e) => {
+                if (e.target === e.currentTarget) setShowReportSheet(false);
+              }}
+            >
+              <div
+                style={{
+                  width: "100%",
+                  background: "#ffffff",
+                  color: "#0f172a",
+                  borderTopLeftRadius: 24,
+                  borderTopRightRadius: 24,
+                  padding: "20px 20px 32px",
+                  boxShadow: "0 -8px 32px rgba(0,0,0,0.3)",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                  <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>Report Transit / Site Hazard</h3>
+                  <button onClick={() => setShowReportSheet(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#64748b" }}>✕</button>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                  {[
+                    { icon: "🚧", label: "Road Work", type: "construction" },
+                    { icon: "🛑", label: "Road Closed", type: "closure" },
+                    { icon: "⚠️", label: "Road Hazard", type: "hazard" },
+                    { icon: "🚚", label: "Site Delay", type: "delay" },
+                    { icon: "🌧️", label: "Waterlogging", type: "flood" },
+                    { icon: "🚨", label: "Police Post", type: "police" },
+                  ].map((item) => (
+                    <button
+                      key={item.type}
+                      onClick={() => handleReportHazard(item.type, item.label)}
+                      style={{
+                        background: "#f8fafc",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: 14,
+                        padding: "16px 8px",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 8,
+                        cursor: "pointer",
+                      }}
+                    >
+                      <span style={{ fontSize: 28 }}>{item.icon}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: "#1e293b" }}>{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TURN-BY-TURN MANEUVER STEPS SHEET */}
+          {showStepsSheet && (
+            <div
+              style={{
+                position: "fixed",
+                inset: 0,
+                zIndex: 2000,
+                background: "rgba(0,0,0,0.65)",
+                display: "flex",
+                alignItems: "flex-end",
+                pointerEvents: "auto",
+              }}
+              onClick={(e) => {
+                if (e.target === e.currentTarget) setShowStepsSheet(false);
+              }}
+            >
+              <div
+                style={{
+                  width: "100%",
+                  maxHeight: "75vh",
+                  background: "#ffffff",
+                  color: "#0f172a",
+                  borderTopLeftRadius: 24,
+                  borderTopRightRadius: 24,
+                  padding: "20px 20px 32px",
+                  display: "flex",
+                  flexDirection: "column",
+                  boxShadow: "0 -8px 32px rgba(0,0,0,0.3)",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>Route Directions</h3>
+                    <div style={{ fontSize: 12, color: "#64748b" }}>To {destination?.title || "Company Site"} ({remainingKm} km)</div>
+                  </div>
+                  <button onClick={() => setShowStepsSheet(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#64748b" }}>✕</button>
+                </div>
+                <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
+                  {routeSteps.length === 0 ? (
+                    <div style={{ padding: 20, textAlign: "center", color: "#64748b" }}>Follow the blue route line on the map</div>
+                  ) : (
+                    routeSteps.map((step, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          display: "flex",
+                          gap: 12,
+                          alignItems: "center",
+                          padding: "10px 12px",
+                          background: idx === currentStepIdx ? "#e6fffa" : "#f8fafc",
+                          borderRadius: 10,
+                          borderLeft: idx === currentStepIdx ? "4px solid #004d40" : "1px solid #e2e8f0",
+                        }}
+                      >
+                        <span style={{ fontSize: 22 }}>{getManeuverIcon(step.maneuver?.type, step.maneuver?.modifier)}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: 14 }}>{step.name || "Continue along route"}</div>
+                          <div style={{ fontSize: 12, color: "#64748b" }}>
+                            {step.distance > 1000 ? `${(step.distance / 1000).toFixed(1)} km` : `${Math.round(step.distance)} m`}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
