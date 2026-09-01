@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useApp, Ic } from "../App.jsx";
+import { useApp, Ic } from "../context.jsx";
 import { api, fmt, fmtDate, statusBadge } from "../api.js";
 
 export default function ContractsPage() {

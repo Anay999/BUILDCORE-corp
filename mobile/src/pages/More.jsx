@@ -1,11 +1,12 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Ic } from "../App.jsx";
+import { Ic } from "../context.jsx";
 
 const MENU = [
   {
     group: "Field Operations",
     items: [
+      { label: "Live GPS Tracker", path: "/gps", icon: <Ic.MapPin s={20} />, color: "#38bdf8" },
       { label: "Tasks", path: "/tasks", icon: <Ic.List s={20} />, color: "#3b82f6" },
       { label: "Issues", path: "/issues", icon: <Ic.AlertTriangle s={20} />, color: "#ef4444" },
       { label: "Attendance", path: "/attendance", icon: <Ic.Users s={20} />, color: "#10b981" },

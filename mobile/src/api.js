@@ -1,5 +1,23 @@
-// API helper — all calls go to the same backend (port 5000 via Vite proxy)
-const BASE = "/api";
+// API helper — points to backend with smart auto-detection (Hotspot + Same WiFi + Cloud 5G)
+const CANDIDATE_URLS = [
+  "http://192.168.137.73:5000/api", // Mobile Hotspot IP
+  "http://192.168.1.71:5000/api",   // Wi-Fi LAN IP
+  "https://buildcore-anay-live.loca.lt/api", // Cloud Tunnel
+];
+
+const DEFAULT_LOCAL_URL = "http://192.168.137.73:5000/api";
+const DEFAULT_TUNNEL_URL = "https://buildcore-anay-live.loca.lt/api";
+
+export function getApiBaseUrl() {
+  const custom = localStorage.getItem("bc_api_url");
+  if (custom) return custom.replace(/\/+$/, "");
+  return DEFAULT_LOCAL_URL;
+}
+
+export function setApiBaseUrl(url) {
+  if (url) localStorage.setItem("bc_api_url", url.trim().replace(/\/+$/, ""));
+  else localStorage.removeItem("bc_api_url");
+}
 
 function getToken() {
   return localStorage.getItem("bc_token") || "";
@@ -9,19 +27,79 @@ function headers(extra = {}) {
   const t = getToken();
   return {
     "Content-Type": "application/json",
+    "Bypass-Tunnel-Reminder": "true",
+    "bypass-tunnel-reminder": "true",
+    "ngrok-skip-browser-warning": "true",
     ...(t ? { Authorization: `Bearer ${t}` } : {}),
     ...extra,
   };
 }
 
+async function tryFetch(base, path, opts = {}) {
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  const url = path.startsWith("http") ? path : `${base}${cleanPath}`;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+  const mergedHeaders = {
+    "Bypass-Tunnel-Reminder": "true",
+    "bypass-tunnel-reminder": "true",
+    "ngrok-skip-browser-warning": "true",
+    ...(opts.headers || {}),
+  };
+
+  try {
+    const res = await fetch(url, {
+      ...opts,
+      headers: mergedHeaders,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    return res;
+  } catch (err) {
+    clearTimeout(timeoutId);
+    throw err;
+  }
+}
+
 async function req(method, path, body) {
   const opts = { method, headers: headers() };
   if (body !== undefined) opts.body = JSON.stringify(body);
-  const res = await fetch(BASE + path, opts);
+  const primaryBase = getApiBaseUrl();
+
+  let res;
+  try {
+    res = await tryFetch(primaryBase, path, opts);
+  } catch {
+    // Auto-discover which candidate URL is currently online
+    let found = false;
+    for (const altUrl of CANDIDATE_URLS) {
+      if (altUrl === primaryBase) continue;
+      try {
+        res = await tryFetch(altUrl, path, opts);
+        setApiBaseUrl(altUrl);
+        found = true;
+        break;
+      } catch {}
+    }
+    if (!found) {
+      throw new Error("Unable to reach backend. Ensure laptop server is running.");
+    }
+  }
+
   const ct = res.headers.get("content-type") || "";
-  const data = ct.includes("application/json") ? await res.json() : await res.text();
-  if (!res.ok) throw new Error(data?.error || data?.message || `HTTP ${res.status}`);
-  return data;
+  if (ct.includes("application/json")) {
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error || data?.message || `HTTP ${res.status}`);
+    return data;
+  }
+
+  const text = await res.text();
+  if (text.includes("localtunnel") || text.includes("Tunnel Reminder")) {
+    throw new Error("Tunnel reminder page intercepted — reconnecting...");
+  }
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${text.slice(0, 100)}`);
+  return text;
 }
 
 export const api = {
@@ -30,6 +108,40 @@ export const api = {
   put: (path, body) => req("PUT", path, body),
   patch: (path, body) => req("PATCH", path, body),
   delete: (path) => req("DELETE", path),
+  upload: async (path, formData) => {
+    const t = getToken();
+    const opts = {
+      method: "POST",
+      headers: {
+        "Bypass-Tunnel-Reminder": "true",
+        "bypass-tunnel-reminder": "true",
+        "ngrok-skip-browser-warning": "true",
+        ...(t ? { Authorization: `Bearer ${t}` } : {}),
+      },
+      body: formData,
+    };
+    const primaryBase = getApiBaseUrl();
+    let res;
+    try {
+      res = await tryFetch(primaryBase, path, opts);
+    } catch {
+      for (const altUrl of CANDIDATE_URLS) {
+        if (altUrl === primaryBase) continue;
+        try {
+          res = await tryFetch(altUrl, path, opts);
+          setApiBaseUrl(altUrl);
+          break;
+        } catch {}
+      }
+    }
+    const ct = res.headers.get("content-type") || "";
+    if (ct.includes("application/json")) {
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || data?.message || `HTTP ${res.status}`);
+      return data;
+    }
+    return res.text();
+  },
 };
 
 export function fmt(n) {
@@ -42,59 +154,64 @@ export function fmt(n) {
 
 export function fmtDate(d) {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+  return new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+}
+
+export function ago(d) {
+  if (!d) return "";
+  const s = Math.floor((Date.now() - new Date(d)) / 1000);
+  if (s < 60) return "just now";
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
+}
+
+export function initials(name = "") {
+  return name.split(" ").map((w) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase() || "U";
 }
 
 export function fmtTime(d) {
   if (!d) return "—";
-  return new Date(d).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+  return new Date(d).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-export function ago(d) {
-  if (!d) return "—";
-  const diff = Date.now() - new Date(d).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "just now";
-  if (m < 60) return m + "m ago";
-  const h = Math.floor(m / 60);
-  if (h < 24) return h + "h ago";
-  const days = Math.floor(h / 24);
-  if (days < 30) return days + "d ago";
-  return fmtDate(d);
-}
-
-export function initials(name = "") {
-  return name.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase() || "?";
-}
-
-export function statusBadge(status) {
+export function prioColor(p = "") {
   const map = {
-    "In Progress": "badge-blue",
-    "Completed": "badge-green",
-    "Planned": "badge-purple",
-    "Delayed": "badge-red",
-    "On Hold": "badge-yellow",
-    open: "badge-red", resolved: "badge-green", closed: "badge-gray",
-    in_progress: "badge-blue", pending: "badge-yellow",
-    approved: "badge-green", rejected: "badge-red",
-    active: "badge-blue", inactive: "badge-gray",
-    paid: "badge-green", unpaid: "badge-red", partial: "badge-yellow",
-    low: "badge-green", medium: "badge-yellow", high: "badge-red", critical: "badge-red",
+    critical: "#ef4444",
+    high: "#f97316",
+    medium: "#f59e0b",
+    low: "#10b981",
   };
-  return map[status] || "badge-gray";
+  return map[p.toLowerCase()] || "#94a3b8";
 }
 
-export function prioColor(p) {
-  return { high: "#ef4444", medium: "#f59e0b", low: "#10b981", critical: "#ef4444" }[p] || "#94a3b8";
-}
-
-export function saveToken(t, u) {
-  localStorage.setItem("bc_token", t);
-  localStorage.setItem("bc_user", JSON.stringify(u));
+export function statusBadge(s = "") {
+  const map = {
+    active: { bg: "#064e3b", text: "#34d399", label: "Active" },
+    completed: { bg: "#1e3a8a", text: "#60a5fa", label: "Completed" },
+    delayed: { bg: "#7f1d1d", text: "#f87171", label: "Delayed" },
+    "on hold": { bg: "#78350f", text: "#fbbf24", label: "On Hold" },
+    pending: { bg: "#374151", text: "#9ca3af", label: "Pending" },
+    approved: { bg: "#064e3b", text: "#34d399", label: "Approved" },
+    rejected: { bg: "#7f1d1d", text: "#f87171", label: "Rejected" },
+    open: { bg: "#1e3a8a", text: "#60a5fa", label: "Open" },
+    resolved: { bg: "#064e3b", text: "#34d399", label: "Resolved" },
+    closed: { bg: "#374151", text: "#9ca3af", label: "Closed" },
+  };
+  return map[s.toLowerCase()] || { bg: "#1f2937", text: "#e5e7eb", label: s || "Unknown" };
 }
 
 export function getUser() {
-  try { return JSON.parse(localStorage.getItem("bc_user") || "null"); } catch { return null; }
+  try {
+    return JSON.parse(localStorage.getItem("bc_user") || "null");
+  } catch {
+    return null;
+  }
+}
+
+export function saveToken(token, user) {
+  if (token) localStorage.setItem("bc_token", token);
+  if (user) localStorage.setItem("bc_user", JSON.stringify(user));
 }
 
 export function logout() {

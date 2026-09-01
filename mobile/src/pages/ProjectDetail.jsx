@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Ic } from "../App.jsx";
+import { Ic } from "../context.jsx";
 import { api, fmt, fmtDate, statusBadge, prioColor } from "../api.js";
 
 const TABS = ["Overview", "Tasks", "Issues", "Team", "Finance"];

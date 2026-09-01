@@ -3,20 +3,22 @@ const { broadcast } = require("../utils/broadcast");
 
 const createProject = async (req, res) => {
   try {
-    const { title, location, status, budget, deadline, assigned_users, client_name, blueprint } = req.body;
+    const { title, location, status, budget, deadline, assigned_users, client_name, blueprint, latitude, longitude } = req.body;
     const image = req.file ? req.file.filename : "";
     const budgetValue = budget && budget !== "" ? budget : 0;
+    const lat = latitude ? parseFloat(latitude) : null;
+    const lng = longitude ? parseFloat(longitude) : null;
 
     const newProject = await pool.query(
-      `INSERT INTO projects (title, location, status, budget, image, deadline, client_name, blueprint)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-      [title, location, status, budgetValue, image, deadline || null, client_name || "", blueprint || 'Standard Warehouse']
+      `INSERT INTO projects (title, location, status, budget, image, deadline, client_name, blueprint, latitude, longitude)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+      [title, location, status, budgetValue, image, deadline || null, client_name || "", blueprint || 'Standard Warehouse', lat, lng]
     );
 
     const projectId = newProject.rows[0].id;
 
     if (assigned_users) {
-      const users = JSON.parse(assigned_users);
+      const users = typeof assigned_users === "string" ? JSON.parse(assigned_users) : assigned_users;
       for (const userId of users) {
         await pool.query(
           `INSERT INTO project_assignments (project_id, user_id) VALUES ($1, $2)`,
@@ -65,19 +67,21 @@ const getProjects = async (req, res) => {
 const updateProject = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, location, status, budget, deadline, assigned_users, client_name, blueprint } = req.body;
+    const { title, location, status, budget, deadline, assigned_users, client_name, blueprint, latitude, longitude } = req.body;
     const budgetValue = budget && budget !== "" ? budget : 0;
     const image = req.file ? req.file.filename : null;
+    const lat = latitude !== undefined && latitude !== null && latitude !== "" ? parseFloat(latitude) : null;
+    const lng = longitude !== undefined && longitude !== null && longitude !== "" ? parseFloat(longitude) : null;
 
     if (image) {
       await pool.query(
-        `UPDATE projects SET title=$1, location=$2, status=$3, budget=$4, deadline=$5, image=$6, client_name=$7, blueprint=$8 WHERE id=$9`,
-        [title, location, status, budgetValue, deadline || null, image, client_name || "", blueprint || 'Standard Warehouse', id]
+        `UPDATE projects SET title=$1, location=$2, status=$3, budget=$4, deadline=$5, image=$6, client_name=$7, blueprint=$8, latitude=COALESCE($9, latitude), longitude=COALESCE($10, longitude) WHERE id=$11`,
+        [title, location, status, budgetValue, deadline || null, image, client_name || "", blueprint || 'Standard Warehouse', lat, lng, id]
       );
     } else {
       await pool.query(
-        `UPDATE projects SET title=$1, location=$2, status=$3, budget=$4, deadline=$5, client_name=$6, blueprint=$7 WHERE id=$8`,
-        [title, location, status, budgetValue, deadline || null, client_name || "", blueprint || 'Standard Warehouse', id]
+        `UPDATE projects SET title=$1, location=$2, status=$3, budget=$4, deadline=$5, client_name=$6, blueprint=$7, latitude=COALESCE($8, latitude), longitude=COALESCE($9, longitude) WHERE id=$10`,
+        [title, location, status, budgetValue, deadline || null, client_name || "", blueprint || 'Standard Warehouse', lat, lng, id]
       );
     }
 

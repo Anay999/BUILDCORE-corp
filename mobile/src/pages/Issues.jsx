@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useApp, Ic } from "../App.jsx";
+import { useApp, Ic } from "../context.jsx";
 import { api, fmtDate, prioColor, statusBadge } from "../api.js";
 
 const FILTERS = ["All", "open", "in_progress", "resolved", "closed"];

@@ -1,0 +1,10 @@
+{
+  "appId": "com.buildcore.erp",
+  "appName": "BuildCore ERP",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "cleartext": true,
+    "androidScheme": "http"
+  }
+}

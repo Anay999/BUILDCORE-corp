@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">BuildCore ERP</string>
+    <string name="title_activity_main">BuildCore ERP</string>
+    <string name="package_name">com.buildcore.erp</string>
+    <string name="custom_url_scheme">com.buildcore.erp</string>
+</resources>

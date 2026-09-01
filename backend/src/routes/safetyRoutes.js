@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const pool = require("../config/db");
 const jwt = require("jsonwebtoken");
+const { createNotification } = require("./notificationRoutes");
 
 pool.query(`
   CREATE TABLE IF NOT EXISTS safety_inspections (

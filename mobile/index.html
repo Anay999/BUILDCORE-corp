@@ -15,6 +15,28 @@
       html, body, #root { height: 100%; width: 100%; overflow: hidden; }
       body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f1f5f9; }
     </style>
+    <script>
+      window.addEventListener('error', function(e) {
+        var el = document.getElementById('debug-err');
+        if (!el) {
+          el = document.createElement('div');
+          el.id = 'debug-err';
+          el.style.cssText = 'position:fixed;inset:0;background:#0f172a;color:#f87171;padding:24px;z-index:99999;font-family:monospace;overflow:auto;';
+          document.body.appendChild(el);
+        }
+        el.innerHTML += '<h3>JS Error:</h3><p><b>' + e.message + '</b></p><p>File: ' + e.filename + ':' + e.lineno + '</p><pre>' + (e.error ? e.error.stack : '') + '</pre><hr style="border-color:#334155"/>';
+      });
+      window.addEventListener('unhandledrejection', function(e) {
+        var el = document.getElementById('debug-err');
+        if (!el) {
+          el = document.createElement('div');
+          el.id = 'debug-err';
+          el.style.cssText = 'position:fixed;inset:0;background:#0f172a;color:#f87171;padding:24px;z-index:99999;font-family:monospace;overflow:auto;';
+          document.body.appendChild(el);
+        }
+        el.innerHTML += '<h3>Promise Error:</h3><p><b>' + (e.reason?.message || e.reason) + '</b></p><hr style="border-color:#334155"/>';
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>

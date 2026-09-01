@@ -238,12 +238,82 @@ router.patch("/timesheets/:id/review", async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-// DELETE /api/time-tracking/timesheets/:id — worker can delete own draft
-router.delete("/timesheets/:id", async (req, res) => {
+// Worker live GPS locations table
+pool.query(`
+  CREATE TABLE IF NOT EXISTS worker_locations (
+    user_id     INTEGER PRIMARY KEY,
+    project_id  INTEGER,
+    latitude    DOUBLE PRECISION NOT NULL,
+    longitude   DOUBLE PRECISION NOT NULL,
+    speed       DOUBLE PRECISION,
+    accuracy    DOUBLE PRECISION,
+    heading     DOUBLE PRECISION,
+    updated_at  TIMESTAMP NOT NULL DEFAULT NOW()
+  )
+`).catch(e => console.log("worker_locations:", e.message));
+
+// POST /api/time-tracking/location — update worker's live GPS position
+router.post("/location", async (req, res) => {
+  const u = getUser(req);
+  if (!u) return res.status(401).json({ error: "Unauthorized" });
+  const { latitude, longitude, speed, accuracy, heading, project_id } = req.body;
+  if (latitude == null || longitude == null) {
+    return res.status(400).json({ error: "latitude and longitude are required" });
+  }
+
+  try {
+    const r = await pool.query(`
+      INSERT INTO worker_locations (user_id, project_id, latitude, longitude, speed, accuracy, heading, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+      ON CONFLICT (user_id) DO UPDATE
+        SET project_id = COALESCE($2, worker_locations.project_id),
+            latitude   = $3,
+            longitude  = $4,
+            speed      = $5,
+            accuracy   = $6,
+            heading    = $7,
+            updated_at = NOW()
+      RETURNING *
+    `, [u.id, project_id || null, latitude, longitude, speed || null, accuracy || null, heading || null]);
+
+    const locData = {
+      ...r.rows[0],
+      user_name: u.name,
+      user_role: u.role
+    };
+
+    const io = req.app.get("io");
+    if (io) {
+      io.emit("worker_location_update", locData);
+      if (project_id) io.to(`project_${project_id}`).emit("worker_location_update", locData);
+    }
+
+    res.json({ ok: true, location: locData });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /api/time-tracking/live-workers — get all recently active worker positions
+router.get("/live-workers", async (req, res) => {
   const u = getUser(req);
   if (!u) return res.status(401).json({ error: "Unauthorized" });
   try {
-    await pool.query(`DELETE FROM timesheets WHERE id=$1 AND user_id=$2 AND status='draft'`, [req.params.id, u.id]);
-    res.json({ ok: true });
+    const { project_id } = req.query;
+    let q = `
+      SELECT wl.*, u.name AS user_name, u.role AS user_role, p.title AS project_title
+      FROM worker_locations wl
+      JOIN users u ON u.id = wl.user_id
+      LEFT JOIN projects p ON p.id = wl.project_id
+      WHERE wl.updated_at > NOW() - INTERVAL '1 hour'
+    `;
+    const params = [];
+    if (project_id) {
+      params.push(project_id);
+      q += ` AND wl.project_id = $1`;
+    }
+    q += ` ORDER BY wl.updated_at DESC`;
+    const r = await pool.query(q, params);
+    res.json(r.rows);
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
+
+module.exports = router;

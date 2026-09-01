@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Ic } from "../App.jsx";
+import { Ic } from "../context.jsx";
 import { api, ago } from "../api.js";
 
 export default function AlertsPage() {

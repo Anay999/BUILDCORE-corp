@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useApp, Ic } from "../App.jsx";
+import { useApp, Ic } from "../context.jsx";
 import { api, fmt, fmtDate, ago, initials } from "../api.js";
 
 export default function DashboardPage() {
@@ -77,10 +77,10 @@ export default function DashboardPage() {
             {/* Quick actions */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
               {[
+                { label: "GPS Tracker", icon: <Ic.MapPin s={20} />, path: "/gps", color: "#38bdf8" },
                 { label: "Log DSR", icon: <Ic.ClipboardList s={20} />, path: "/dsr", color: "#3b82f6" },
                 { label: "New Issue", icon: <Ic.AlertTriangle s={20} />, path: "/issues", color: "#ef4444" },
                 { label: "Attendance", icon: <Ic.Users s={20} />, path: "/attendance", color: "#10b981" },
-                { label: "Timelog", icon: <Ic.Clock s={20} />, path: "/timelog", color: "#8b5cf6" },
               ].map(a => (
                 <button key={a.path} className="card card-sm" style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", border: "none", textAlign: "left", width: "100%" }} onClick={() => nav(a.path)}>
                   <div style={{ width: 38, height: 38, borderRadius: 10, background: a.color + "22", color: a.color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>

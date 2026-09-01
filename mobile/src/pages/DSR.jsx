@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useApp, Ic } from "../App.jsx";
+import { useApp, Ic } from "../context.jsx";
 import { api, fmtDate, ago } from "../api.js";
 
 export default function DSRPage() {

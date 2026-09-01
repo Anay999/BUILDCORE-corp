@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Ic } from "../App.jsx";
+import { Ic, useApp } from "../context.jsx";
 import { api, fmt, fmtDate, statusBadge } from "../api.js";
 
 const STATUS_COLORS = { "In Progress": "#3b82f6", "Completed": "#10b981", "Delayed": "#ef4444", "Planned": "#8b5cf6", "On Hold": "#f59e0b" };
@@ -8,14 +8,88 @@ const FILTERS = ["All", "In Progress", "Planned", "Delayed", "Completed", "On Ho
 
 export default function ProjectsPage() {
   const nav = useNavigate();
+  const { showToast } = useApp();
   const [projects, setProjects] = useState([]);
   const [filter, setFilter] = useState("All");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
 
+  // New Project Modal State
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState({
+    title: "",
+    client_name: "",
+    budget: "",
+    status: "Planned",
+    location: "",
+    latitude: null,
+    longitude: null,
+  });
+  const [locQuery, setLocQuery] = useState("");
+  const [locSuggestions, setLocSuggestions] = useState([]);
+  const [isSearchingLoc, setIsSearchingLoc] = useState(false);
+  const [showLocList, setShowLocList] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const fetchProjects = () => {
+    api.get("/projects")
+      .then(d => { setProjects(Array.isArray(d) ? d : []); setLoading(false); })
+      .catch(() => setLoading(false));
+  };
+
   useEffect(() => {
-    api.get("/projects").then(d => { setProjects(Array.isArray(d) ? d : []); setLoading(false); }).catch(() => setLoading(false));
+    fetchProjects();
   }, []);
+
+  const handleSearchLoc = async (text) => {
+    setLocQuery(text);
+    setForm(f => ({ ...f, location: text }));
+    if (text.trim().length >= 2) {
+      setIsSearchingLoc(true);
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(text)}&format=json&limit=5&addressdetails=1&countrycodes=in`);
+        const data = await res.json();
+        setLocSuggestions(data || []);
+        setShowLocList(true);
+      } catch (err) {
+        console.warn(err);
+      } finally {
+        setIsSearchingLoc(false);
+      }
+    } else {
+      setLocSuggestions([]);
+      setShowLocList(false);
+    }
+  };
+
+  const selectLoc = (item) => {
+    setForm(f => ({
+      ...f,
+      location: item.display_name,
+      latitude: parseFloat(item.lat),
+      longitude: parseFloat(item.lon),
+    }));
+    setLocQuery(item.display_name);
+    setShowLocList(false);
+  };
+
+  const handleCreateProject = async (e) => {
+    e.preventDefault();
+    if (!form.title.trim()) return;
+    setSaving(true);
+    try {
+      await api.post("/projects", form);
+      showToast("Project site created successfully! 🏗️", "success");
+      setShowModal(false);
+      setForm({ title: "", client_name: "", budget: "", status: "Planned", location: "", latitude: null, longitude: null });
+      setLocQuery("");
+      fetchProjects();
+    } catch (err) {
+      showToast(err.message || "Failed to create project", "error");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const filtered = projects.filter(p => {
     const matchF = filter === "All" || p.status === filter;
@@ -27,6 +101,26 @@ export default function ProjectsPage() {
     <>
       <div className="top-bar">
         <h1>Projects</h1>
+        <button
+          onClick={() => setShowModal(true)}
+          style={{
+            marginLeft: "auto",
+            background: "linear-gradient(135deg, #3b82f6, #2563eb)",
+            color: "#ffffff",
+            border: "none",
+            borderRadius: 8,
+            padding: "6px 12px",
+            fontSize: 12,
+            fontWeight: 700,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+            boxShadow: "0 2px 8px rgba(59,130,246,0.4)"
+          }}
+        >
+          <span>+</span> New Site
+        </button>
       </div>
 
       <div className="page-content">
@@ -82,6 +176,81 @@ export default function ProjectsPage() {
         )}
         <div style={{ height: 8 }} />
       </div>
+
+      {/* CREATE PROJECT MODAL WITH REAL LOCATION SEARCH */}
+      {showModal && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: "#1e293b", borderRadius: 16, border: "1px solid #334155", width: "100%", maxWidth: 380, maxHeight: "90vh", overflowY: "auto", padding: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 800, color: "#f1f5f9", margin: 0 }}>Create Project Site</h2>
+              <button onClick={() => setShowModal(false)} style={{ background: "none", border: "none", color: "#94a3b8", fontSize: 20, cursor: "pointer" }}>✕</button>
+            </div>
+
+            <form onSubmit={handleCreateProject}>
+              <div className="field">
+                <label>Project Title *</label>
+                <input type="text" placeholder="e.g. RMK Campus Block B" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required />
+              </div>
+
+              <div className="field" style={{ position: "relative" }}>
+                <label style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span>Site Location (Real Place)</span>
+                  {isSearchingLoc && <span style={{ color: "#38bdf8", fontSize: 11 }}>Searching…</span>}
+                </label>
+                <input
+                  type="text"
+                  placeholder="Type place name (e.g. RMK College, Chennai...)"
+                  value={locQuery}
+                  onChange={e => handleSearchLoc(e.target.value)}
+                  onFocus={() => { if (locSuggestions.length > 0) setShowLocList(true); }}
+                  required
+                />
+
+                {showLocList && locSuggestions.length > 0 && (
+                  <div style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 50, background: "#0f172a", border: "1px solid #475569", borderRadius: 8, maxHeight: 150, overflowY: "auto", boxShadow: "0 8px 24px rgba(0,0,0,0.5)" }}>
+                    {locSuggestions.map((item, idx) => (
+                      <div
+                        key={idx}
+                        onClick={() => selectLoc(item)}
+                        style={{ padding: "8px 12px", borderBottom: "1px solid #1e293b", cursor: "pointer", fontSize: 12, color: "#f1f5f9" }}
+                      >
+                        <div style={{ fontWeight: 700 }}>📍 {item.display_name.split(",")[0]}</div>
+                        <div style={{ fontSize: 10, color: "#94a3b8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.display_name}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div className="field">
+                  <label>Client</label>
+                  <input type="text" placeholder="e.g. Tata Infra" value={form.client_name} onChange={e => setForm({ ...form, client_name: e.target.value })} />
+                </div>
+                <div className="field">
+                  <label>Budget (₹)</label>
+                  <input type="number" placeholder="5000000" value={form.budget} onChange={e => setForm({ ...form, budget: e.target.value })} />
+                </div>
+              </div>
+
+              <div className="field">
+                <label>Status</label>
+                <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
+                  <option value="Planned">Planned</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Delayed">Delayed</option>
+                  <option value="Completed">Completed</option>
+                </select>
+              </div>
+
+              <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)} style={{ flex: 1 }}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={saving} style={{ flex: 2 }}>{saving ? "Saving..." : "Create Site"}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 }

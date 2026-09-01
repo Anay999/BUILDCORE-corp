@@ -303,7 +303,7 @@ exports.analyzePhoto = async (req, res) => {
     }
   }
 
-  const estimatedCompletion = Math.min(100, Math.max(0, currentCompletion + progressIncrement));
+  let estimatedCompletion = Math.min(100, Math.max(0, currentCompletion + progressIncrement));
 
   // ─────────────────────────────────────────────────────
   // STEP 4: Blueprint Comparison & Schedule Status

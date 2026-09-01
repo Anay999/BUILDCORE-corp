@@ -421,6 +421,11 @@ function App() {
   const [users, setUsers] = useState([]);
   const [title, setTitle] = useState("");
   const [location, setLocation] = useState("");
+  const [projLat, setProjLat] = useState(null);
+  const [projLng, setProjLng] = useState(null);
+  const [locSuggestions, setLocSuggestions] = useState([]);
+  const [isSearchingLoc, setIsSearchingLoc] = useState(false);
+  const [showLocSuggestions, setShowLocSuggestions] = useState(false);
   const [status, setStatus] = useState("");
   const [budget, setBudget] = useState("");
   const [image, setImage] = useState(null);
@@ -500,12 +505,12 @@ function App() {
       workingHours:"Working Hours", customFields:"Custom Fields",
       auditLog:"Audit Log", storageFiles:"Storage & Files",
       calendar:"Calendar", issues:"Issues", timelog:"Time Log",
-      payrollGroup:"Payroll", purchases:"Purchases", vendors:"Vendors",
+      payrollGroup:"Payroll", vendors:"Vendors",
       requisitions:"Requisitions", inventory:"Inventory", equipment:"Equipment",
       assetsGroup:"Assets", procurementGroup:"Procurement",
       teamGroup:"Team", allMembers:"All Members", newMember:"New Member",
-      insightsGroup:"Insights", aiAnalysis:"AI Analysis",
-      connectGroup:"Connect", chat:"Chat", clientRequests:"Client Requests",
+      insightsGroup:"Insights",
+      connectGroup:"Connect", clientRequests:"Client Requests",
       siteReports:"Site Reports", resources:"Resources", commandCenter:"Command Center",
       alertsGroup:"Alerts",
     },
@@ -532,12 +537,12 @@ function App() {
       workingHours:"कार्य समय", customFields:"कस्टम फ़ील्ड",
       auditLog:"ऑडिट लॉग", storageFiles:"संग्रहण और फ़ाइलें",
       calendar:"कैलेंडर", issues:"समस्याएँ", timelog:"समय लॉग",
-      payrollGroup:"वेतन", purchases:"खरीदारी", vendors:"विक्रेता",
+      payrollGroup:"वेतन", vendors:"विक्रेता",
       requisitions:"मांग-पत्र", inventory:"सूची", equipment:"उपकरण",
       assetsGroup:"संपत्ति", procurementGroup:"खरीद",
       teamGroup:"टीम", allMembers:"सभी सदस्य", newMember:"नया सदस्य",
-      insightsGroup:"अंतर्दृष्टि", aiAnalysis:"AI विश्लेषण",
-      connectGroup:"संपर्क", chat:"चैट", clientRequests:"ग्राहक अनुरोध",
+      insightsGroup:"अंतर्दृष्टि",
+      connectGroup:"संपर्क", clientRequests:"ग्राहक अनुरोध",
       siteReports:"साइट रिपोर्ट", resources:"संसाधन", commandCenter:"कमांड सेंटर",
       alertsGroup:"अलर्ट",
     },
@@ -564,12 +569,12 @@ function App() {
       workingHours:"வேலை நேரம்", customFields:"தனிப்பயன் புலங்கள்",
       auditLog:"தணிக்கை பதிவு", storageFiles:"சேமிப்பு & கோப்புகள்",
       calendar:"நாட்காட்டி", issues:"சிக்கல்கள்", timelog:"நேர பதிவு",
-      payrollGroup:"சம்பளம்", purchases:"கொள்முதல்", vendors:"விற்பனையாளர்கள்",
+      payrollGroup:"சம்பளம்", vendors:"விற்பனையாளர்கள்",
       requisitions:"கோரிக்கைகள்", inventory:"சரக்கு", equipment:"உபகரணங்கள்",
       assetsGroup:"சொத்துகள்", procurementGroup:"கொள்முதல்",
       teamGroup:"குழு", allMembers:"அனைத்து உறுப்பினர்கள்", newMember:"புதிய உறுப்பினர்",
-      insightsGroup:"நுண்ணறிவு", aiAnalysis:"AI பகுப்பாய்வு",
-      connectGroup:"இணைப்பு", chat:"அரட்டை", clientRequests:"வாடிக்கையாளர் கோரிக்கைகள்",
+      insightsGroup:"நுண்ணறிவு",
+      connectGroup:"இணைப்பு", clientRequests:"வாடிக்கையாளர் கோரிக்கைகள்",
       siteReports:"தள அறிக்கைகள்", resources:"வளங்கள்", commandCenter:"கட்டளை மையம்",
       alertsGroup:"எச்சரிக்கைகள்",
     },
@@ -596,12 +601,12 @@ function App() {
       workingHours:"పని సమయాలు", customFields:"కస్టమ్ ఫీల్డ్లు",
       auditLog:"ఆడిట్ లాగ్", storageFiles:"స్టోరేజ్ & ఫైల్లు",
       calendar:"క్యాలెండర్", issues:"సమస్యలు", timelog:"సమయ లాగ్",
-      payrollGroup:"జీతభత్యాలు", purchases:"కొనుగోళ్ళు", vendors:"విక్రేతలు",
+      payrollGroup:"జీతభత్యాలు", vendors:"విక్రేతలు",
       requisitions:"అభ్యర్థనలు", inventory:"జాబితా", equipment:"పరికరాలు",
       assetsGroup:"ఆస్తులు", procurementGroup:"సేకరణ",
       teamGroup:"జట్టు", allMembers:"అందరు సభ్యులు", newMember:"కొత్త సభ్యుడు",
-      insightsGroup:"అంతర్దృష్టి", aiAnalysis:"AI విశ్లేషణ",
-      connectGroup:"కనెక్ట్", chat:"చాట్", clientRequests:"క్లయింట్ అభ్యర్థనలు",
+      insightsGroup:"అంతర్దృష్టి",
+      connectGroup:"కనెక్ట్", clientRequests:"క్లయింట్ అభ్యర్థనలు",
       siteReports:"సైట్ నివేదికలు", resources:"వనరులు", commandCenter:"కమాండ్ సెంటర్",
       alertsGroup:"హెచ్చరికలు",
     },
@@ -628,12 +633,12 @@ function App() {
       workingHours:"ساعات العمل", customFields:"الحقول المخصصة",
       auditLog:"سجل التدقيق", storageFiles:"التخزين والملفات",
       calendar:"التقويم", issues:"المشكلات", timelog:"سجل الوقت",
-      payrollGroup:"الرواتب", purchases:"المشتريات", vendors:"الموردون",
+      payrollGroup:"الرواتب", vendors:"الموردون",
       requisitions:"طلبات الشراء", inventory:"المخزون", equipment:"المعدات",
       assetsGroup:"الأصول", procurementGroup:"المشتريات",
       teamGroup:"الفريق", allMembers:"جميع الأعضاء", newMember:"عضو جديد",
-      insightsGroup:"رؤى", aiAnalysis:"تحليل الذكاء الاصطناعي",
-      connectGroup:"تواصل", chat:"الدردشة", clientRequests:"طلبات العملاء",
+      insightsGroup:"رؤى",
+      connectGroup:"تواصل", clientRequests:"طلبات العملاء",
       siteReports:"تقارير الموقع", resources:"الموارد", commandCenter:"مركز القيادة",
       alertsGroup:"التنبيهات",
     },
@@ -713,6 +718,116 @@ function App() {
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [chatSearch, setChatSearch] = useState("");
   const [userStatuses, setUserStatuses] = useState({}); // {userId: status}
+
+  /* ── live GPS tracking state ── */
+  const [isGpsTracking, setIsGpsTracking] = useState(false);
+  const [gpsCoords, setGpsCoords] = useState(null); // { latitude, longitude, accuracy, speed, heading, altitude }
+  const [gpsTrail, setGpsTrail] = useState([]); // [{ lat, lng, time }]
+  const [gpsDistance, setGpsDistance] = useState(0); // in meters
+  const [gpsElapsed, setGpsElapsed] = useState("00:00:00");
+  const [liveWorkers, setLiveWorkers] = useState([]); // live worker locations from backend
+  const gpsWatchRef = useRef(null);
+  const gpsTimerRef = useRef(null);
+  const gpsStartTimeRef = useRef(null);
+
+  const calculateGpsDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371e3; // metres
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  const startGpsTracking = () => {
+    if (!navigator.geolocation) {
+      addToast("Geolocation is not supported by your browser", "error");
+      return;
+    }
+    setIsGpsTracking(true);
+    const startT = Date.now();
+    gpsStartTimeRef.current = startT;
+    setGpsTrail([]);
+    setGpsDistance(0);
+
+    if (gpsTimerRef.current) clearInterval(gpsTimerRef.current);
+    gpsTimerRef.current = setInterval(() => {
+      const diff = Math.floor((Date.now() - startT) / 1000);
+      const h = String(Math.floor(diff / 3600)).padStart(2, "0");
+      const m = String(Math.floor((diff % 3600) / 60)).padStart(2, "0");
+      const s = String(diff % 60).padStart(2, "0");
+      setGpsElapsed(`${h}:${m}:${s}`);
+    }, 1000);
+
+    if (gpsWatchRef.current != null) {
+      navigator.geolocation.clearWatch(gpsWatchRef.current);
+    }
+
+    gpsWatchRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        const { latitude, longitude, accuracy, speed, heading, altitude } = pos.coords;
+        setGpsCoords({ latitude, longitude, accuracy, speed, heading, altitude });
+        setGpsTrail(prev => {
+          if (prev.length > 0) {
+            const last = prev[prev.length - 1];
+            const dist = calculateGpsDistance(last.lat, last.lng, latitude, longitude);
+            if (dist > 1) {
+              setGpsDistance(d => d + dist);
+            }
+          }
+          return [...prev, { lat: latitude, lng: longitude, time: Date.now() }];
+        });
+
+        // Broadcast to backend
+        try {
+          const tkn = localStorage.getItem("token");
+          fetch("http://localhost:5000/api/time-tracking/location", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": tkn ? `Bearer ${tkn}` : ""
+            },
+            body: JSON.stringify({ latitude, longitude, speed, accuracy, heading })
+          }).catch(() => {});
+        } catch(e) {}
+      },
+      (err) => {
+        console.error("GPS Tracking error:", err);
+        addToast(`GPS Error: ${err.message}`, "error");
+      },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+    );
+
+    addToast("Live GPS tracking started! 📍", "success");
+  };
+
+  const stopGpsTracking = () => {
+    if (gpsWatchRef.current != null) {
+      navigator.geolocation.clearWatch(gpsWatchRef.current);
+      gpsWatchRef.current = null;
+    }
+    if (gpsTimerRef.current) {
+      clearInterval(gpsTimerRef.current);
+      gpsTimerRef.current = null;
+    }
+    setIsGpsTracking(false);
+    addToast("Live GPS tracking stopped.", "info");
+  };
+
+  const fetchLiveWorkers = async () => {
+    try {
+      const tkn = localStorage.getItem("token");
+      const res = await fetch("http://localhost:5000/api/time-tracking/live-workers", {
+        headers: { "Authorization": tkn ? `Bearer ${tkn}` : "" }
+      });
+      const data = await res.json();
+      if (Array.isArray(data)) setLiveWorkers(data);
+    } catch(e) {}
+  };
 
   /* ── nav accordions ── */
   const [teamExpanded, setTeamExpanded] = useState(false);
@@ -1939,6 +2054,8 @@ function App() {
         fd.append("status", status); fd.append("budget", budget);
         fd.append("deadline", deadline); fd.append("client_name", clientName);
         fd.append("assigned_users", JSON.stringify(assignedUsers));
+        if (projLat) fd.append("latitude", projLat);
+        if (projLng) fd.append("longitude", projLng);
         if (image) fd.append("image", image);
         await axios.put(`http://localhost:5000/api/projects/${editingId}`, fd, { headers: headers() });
         setEditingId(null);
@@ -1950,12 +2067,14 @@ function App() {
         fd.append("client_name", clientName);
         fd.append("assigned_users", JSON.stringify(assignedUsers));
         fd.append("blueprint", blueprintClass);
+        if (projLat) fd.append("latitude", projLat);
+        if (projLng) fd.append("longitude", projLng);
         await axios.post("http://localhost:5000/api/projects", fd, { headers: headers() });
       }
       const updated = await axios.get("http://localhost:5000/api/projects", { headers: headers() });
       setProjects(updated.data);
       const wasEditing = !!editingId;
-      setTitle(""); setLocation(""); setStatus(""); setBudget("");
+      setTitle(""); setLocation(""); setStatus(""); setBudget(""); setProjLat(null); setProjLng(null);
       setImage(null); setAssignedUsers([]); setDeadline(""); setEmployeeSearch(""); setClientName(""); setBlueprintClass("Standard Warehouse"); setNewWorkers([{ name: "", email: "" }]);
       setShowAddPanel(false);
       addToast(wasEditing ? "Project updated!" : "Project created!", "success", title);
@@ -3825,9 +3944,84 @@ function App() {
                   <input style={inputSt} type="number" placeholder="e.g. 40000000" value={budget} onChange={e => setBudget(e.target.value)} />
                 </div>
               </div>
-              <div>
-                <label style={labelSt}>Site Address</label>
-                <input style={inputSt} placeholder="e.g. Sector 5, Jubilee Hills" value={location} onChange={e => setLocation(e.target.value)} />
+              <div style={{ position: "relative" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <label style={labelSt}>Site Location (Real Place Autocomplete)</label>
+                  {isSearchingLoc && <span style={{ fontSize: "11px", color: t.accent }}>Searching map…</span>}
+                </div>
+                <input
+                  style={inputSt}
+                  placeholder="Type to search real location (e.g. RMK College, Chennai, Jubilee Hills...)"
+                  value={location}
+                  onChange={async (e) => {
+                    const val = e.target.value;
+                    setLocation(val);
+                    if (val.trim().length >= 2) {
+                      setIsSearchingLoc(true);
+                      try {
+                        const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val)}&format=json&limit=5&addressdetails=1&countrycodes=in`);
+                        const data = await res.json();
+                        setLocSuggestions(data || []);
+                        setShowLocSuggestions(true);
+                      } catch (err) {
+                        console.warn("Location lookup error:", err);
+                      } finally {
+                        setIsSearchingLoc(false);
+                      }
+                    } else {
+                      setLocSuggestions([]);
+                      setShowLocSuggestions(false);
+                    }
+                  }}
+                  onFocus={() => { if (locSuggestions.length > 0) setShowLocSuggestions(true); }}
+                />
+                {showLocSuggestions && locSuggestions.length > 0 && (
+                  <div style={{
+                    position: "absolute",
+                    top: "100%",
+                    left: 0,
+                    right: 0,
+                    zIndex: 100,
+                    background: t.card,
+                    border: `1px solid ${t.border}`,
+                    borderRadius: "10px",
+                    boxShadow: "0 10px 25px rgba(0,0,0,0.4)",
+                    maxHeight: "180px",
+                    overflowY: "auto",
+                    marginTop: "4px"
+                  }}>
+                    {locSuggestions.map((item, idx) => (
+                      <div
+                        key={idx}
+                        onClick={() => {
+                          setLocation(item.display_name);
+                          setProjLat(parseFloat(item.lat));
+                          setProjLng(parseFloat(item.lon));
+                          setShowLocSuggestions(false);
+                        }}
+                        style={{
+                          padding: "10px 14px",
+                          fontSize: "12px",
+                          color: t.text,
+                          borderBottom: idx < locSuggestions.length - 1 ? `1px solid ${t.divider}` : "none",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px"
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = t.hover}
+                        onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                      >
+                        <span style={{ fontSize: "14px" }}>📍</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: "600", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.display_name.split(",")[0]}</div>
+                          <div style={{ fontSize: "10px", color: t.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.display_name}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {showLocSuggestions && <div style={{ position: "fixed", inset: 0, zIndex: 99 }} onClick={() => setShowLocSuggestions(false)} />}
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
@@ -13297,62 +13491,202 @@ ${punch.map(pl=>`<tr><td>${pl.title}</td><td>${pl.priority||"—"}</td><td><span
           {activePage === "map" && !can(effectiveRole,"canViewMap") && <NoAccess page="Map" t={t} />}
           {activePage === "map" && can(effectiveRole,"canViewMap") && (
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              <div style={{ fontSize: "13px", color: t.muted }}>{projects.length} project site{projects.length !== 1 ? "s" : ""} on map</div>
-              {projects.length === 0 ? (
-                <div style={{ background: t.card, border: `1px solid ${t.cardBorder}`, borderRadius: "14px", padding: "80px 40px", textAlign: "center", boxShadow: t.shadow }}>
-                  <svg width="52" height="52" viewBox="0 0 52 52" fill="none" style={{marginBottom:"12px",opacity:0.3,color:t.muted}}><circle cx="26" cy="22" r="10" stroke="currentColor" strokeWidth="2"/><path d="M26 32 C26 32 16 42 26 46 C36 42 26 32 26 32 Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/><circle cx="26" cy="22" r="3" fill="currentColor" opacity="0.5"/></svg>
-                  <div style={{ fontSize: "16px", fontWeight: "700", color: t.text, marginBottom: "6px" }}>No projects yet</div>
-                  <div style={{ fontSize: "13px", color: t.muted }}>Add projects with locations to see them on the map</div>
+              {/* Map Header & GPS Control Bar */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", background: t.card, border: `1px solid ${t.cardBorder}`, borderRadius: "14px", padding: "16px 20px", boxShadow: t.shadow }}>
+                <div>
+                  <div style={{ fontSize: "16px", fontWeight: "800", color: t.text }}>Live Project & GPS Command Center</div>
+                  <div style={{ fontSize: "12px", color: t.muted }}>{projects.length} construction site{projects.length !== 1 ? "s" : ""} • {liveWorkers.length} active field worker{liveWorkers.length !== 1 ? "s" : ""}</div>
                 </div>
-              ) : (
-                <div style={{ background: t.card, border: `1px solid ${t.cardBorder}`, borderRadius: "14px", overflow: "hidden", boxShadow: t.shadow }}>
-                  {/* Leaflet map via iframe — no API key needed */}
-                  <div style={{ height: "500px", width: "100%", position: "relative" }}>
-                    <iframe
-                      title="Project Map"
-                      style={{ width: "100%", height: "100%", border: "none" }}
-                      srcDoc={`<!DOCTYPE html><html><head>
-                        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-                        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-                        <style>body{margin:0;padding:0;}#map{width:100%;height:100vh;}</style>
-                      </head><body><div id="map"></div><script>
-                        const map = L.map('map').setView([20.5937, 78.9629], 5);
-                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(map);
-                        const projects = ${JSON.stringify(projects.map(p => ({ title: p.title, location: p.location, status: p.status, budget: p.budget, client: p.client_name })))};
-                        const statusColors = { completed:'#10b981', ongoing:'#3b82f6', planned:'#8b5cf6', delayed:'#ef4444' };
-                        const geocodeAndPin = async (p) => {
-                          try {
-                            const r = await fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(p.location+', India')+'&format=json&limit=1');
-                            const d = await r.json();
-                            if(!d[0]) return;
-                            const col = statusColors[p.status?.toLowerCase()] || '#f59e0b';
-                            const icon = L.divIcon({className:'',html:'<div style="width:14px;height:14px;border-radius:50%;background:'+col+';border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.4)"></div>',iconSize:[14,14],iconAnchor:[7,7]});
-                            L.marker([d[0].lat,d[0].lon],{icon}).addTo(map)
-                              .bindPopup('<b>'+p.title+'</b><br/>'+p.location+(p.client?'<br/>Client: '+p.client:'')+'<br/>Status: '+p.status+'<br/>Budget: ₹'+Number(p.budget).toLocaleString());
-                          } catch(e){}
-                        };
-                        projects.forEach(p => geocodeAndPin(p));
-                      </script></body></html>`}
-                    />
+
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                  <button
+                    onClick={fetchLiveWorkers}
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: "6px",
+                      padding: "8px 14px", borderRadius: "8px",
+                      background: t.hover, border: `1px solid ${t.cardBorder}`,
+                      color: t.text, fontSize: "12px", fontWeight: "600", cursor: "pointer"
+                    }}
+                  >
+                    👥 Sync Workers ({liveWorkers.length})
+                  </button>
+
+                  <button
+                    onClick={isGpsTracking ? stopGpsTracking : startGpsTracking}
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: "8px",
+                      padding: "9px 18px", borderRadius: "8px", border: "none",
+                      background: isTrackingColor => isGpsTracking ? "#ef4444" : "linear-gradient(135deg, #10b981, #059669)",
+                      color: "#ffffff", fontSize: "13px", fontWeight: "700", cursor: "pointer",
+                      boxShadow: isGpsTracking ? "0 0 15px rgba(239,68,68,0.4)" : "0 0 15px rgba(16,185,129,0.4)"
+                    }}
+                  >
+                    {isGpsTracking ? (
+                      <>
+                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#fff", display: "inline-block" }} />
+                        Stop Tracking ({gpsElapsed})
+                      </>
+                    ) : (
+                      <>
+                        <span>📍</span>
+                        Start Live GPS Tracking
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Live Tracking HUD Bar */}
+              {isGpsTracking && (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "10px" }}>
+                  <div style={{ background: t.card, border: "1px solid rgba(16,185,129,0.3)", borderRadius: "10px", padding: "12px 14px", boxShadow: t.shadow }}>
+                    <div style={{ fontSize: "11px", color: t.muted, textTransform: "uppercase", letterSpacing: ".04em" }}>Session Time</div>
+                    <div style={{ fontSize: "16px", fontWeight: "800", color: "#10b981", fontFamily: "monospace", marginTop: "2px" }}>{gpsElapsed}</div>
                   </div>
-                  {/* project list below map */}
-                  <div style={{ padding: "16px 20px", borderTop: `1px solid ${t.divider}`, display: "flex", flexWrap: "wrap", gap: "10px" }}>
-                    {projects.map(p => {
-                      const col = statusColor(p.status);
-                      return (
-                        <div key={p.id} onClick={() => { setActivePage("projects"); setSelectedProject(p); fetchProgress(p.id); setProjectTab("overview"); fetchTasks(p.id); }}
-                          style={{ display: "flex", alignItems: "center", gap: "8px", padding: "7px 14px", background: t.hover, borderRadius: "99px", border: `1px solid ${col}30`, cursor: "pointer", transition: "all 0.12s" }}
-                          onMouseEnter={e => e.currentTarget.style.background = col + "18"}
-                          onMouseLeave={e => e.currentTarget.style.background = t.hover}>
-                          <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: col, flexShrink: 0 }} />
-                          <span style={{ fontSize: "12px", fontWeight: "600", color: t.text }}>{p.title}</span>
-                          <span style={{ fontSize: "11px", color: t.muted }}>📍 {p.location}</span>
-                        </div>
-                      );
-                    })}
+                  <div style={{ background: t.card, border: "1px solid rgba(59,130,246,0.3)", borderRadius: "10px", padding: "12px 14px", boxShadow: t.shadow }}>
+                    <div style={{ fontSize: "11px", color: t.muted, textTransform: "uppercase", letterSpacing: ".04em" }}>Distance Covered</div>
+                    <div style={{ fontSize: "16px", fontWeight: "800", color: "#3b82f6", marginTop: "2px" }}>
+                      {gpsDistance > 1000 ? `${(gpsDistance / 1000).toFixed(2)} km` : `${Math.round(gpsDistance)} m`}
+                    </div>
+                  </div>
+                  <div style={{ background: t.card, border: "1px solid rgba(245,158,11,0.3)", borderRadius: "10px", padding: "12px 14px", boxShadow: t.shadow }}>
+                    <div style={{ fontSize: "11px", color: t.muted, textTransform: "uppercase", letterSpacing: ".04em" }}>Live Speed</div>
+                    <div style={{ fontSize: "16px", fontWeight: "800", color: "#f59e0b", marginTop: "2px" }}>
+                      {gpsCoords?.speed ? (gpsCoords.speed * 3.6).toFixed(1) : "0.0"} <span style={{ fontSize: "11px", fontWeight: "400" }}>km/h</span>
+                    </div>
+                  </div>
+                  <div style={{ background: t.card, border: "1px solid rgba(139,92,246,0.3)", borderRadius: "10px", padding: "12px 14px", boxShadow: t.shadow }}>
+                    <div style={{ fontSize: "11px", color: t.muted, textTransform: "uppercase", letterSpacing: ".04em" }}>GPS Accuracy</div>
+                    <div style={{ fontSize: "16px", fontWeight: "800", color: "#8b5cf6", marginTop: "2px" }}>
+                      ±{Math.round(gpsCoords?.accuracy || 0)} <span style={{ fontSize: "11px", fontWeight: "400" }}>m</span>
+                    </div>
+                  </div>
+                  <div style={{ background: t.card, border: `1px solid ${t.cardBorder}`, borderRadius: "10px", padding: "12px 14px", boxShadow: t.shadow }}>
+                    <div style={{ fontSize: "11px", color: t.muted, textTransform: "uppercase", letterSpacing: ".04em" }}>Coordinates</div>
+                    <div style={{ fontSize: "13px", fontWeight: "700", color: t.text, marginTop: "4px" }}>
+                      {gpsCoords ? `${gpsCoords.latitude.toFixed(4)}, ${gpsCoords.longitude.toFixed(4)}` : "Acquiring..."}
+                    </div>
                   </div>
                 </div>
               )}
+
+              {/* Map Container */}
+              <div style={{ background: t.card, border: `1px solid ${t.cardBorder}`, borderRadius: "14px", overflow: "hidden", boxShadow: t.shadow }}>
+                <div style={{ height: "550px", width: "100%", position: "relative" }}>
+                  <iframe
+                    title="Project Map"
+                    style={{ width: "100%", height: "100%", border: "none" }}
+                    srcDoc={`<!DOCTYPE html><html><head>
+                      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+                      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+                      <style>
+                        body { margin:0; padding:0; background:#0f172a; }
+                        #map { width:100%; height:100vh; }
+                        .pulse-ring {
+                          border: 3px solid #3b82f6;
+                          border-radius: 50%;
+                          height: 18px;
+                          width: 18px;
+                          position: absolute;
+                          animation: pulsate 1.5s ease-out infinite;
+                          opacity: 0;
+                        }
+                        @keyframes pulsate {
+                          0% { transform: scale(0.1, 0.1); opacity: 0; }
+                          50% { opacity: 1; }
+                          100% { transform: scale(1.8, 1.8); opacity: 0; }
+                        }
+                      </style>
+                    </head><body><div id="map"></div><script>
+                      const userLat = ${gpsCoords?.latitude || 20.5937};
+                      const userLng = ${gpsCoords?.longitude || 78.9629};
+                      const mapZoom = ${gpsCoords ? 16 : 5};
+                      const map = L.map('map').setView([userLat, userLng], mapZoom);
+                      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '© OpenStreetMap contributors'
+                      }).addTo(map);
+
+                      const projects = ${JSON.stringify(projects.map(p => ({ id: p.id, title: p.title, location: p.location, status: p.status, budget: p.budget, client: p.client_name })))};
+                      const statusColors = { completed:'#10b981', ongoing:'#3b82f6', planned:'#8b5cf6', delayed:'#ef4444' };
+                      
+                      // Geocode and place project markers
+                      const geocodeAndPin = async (p) => {
+                        try {
+                          const r = await fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(p.location+', India')+'&format=json&limit=1');
+                          const d = await r.json();
+                          if(!d[0]) return;
+                          const col = statusColors[p.status?.toLowerCase()] || '#f59e0b';
+                          const icon = L.divIcon({
+                            className:'',
+                            html:'<div style="width:16px;height:16px;border-radius:50%;background:'+col+';border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.5)"></div>',
+                            iconSize:[16,16],
+                            iconAnchor:[8,8]
+                          });
+                          L.marker([d[0].lat, d[0].lon], {icon}).addTo(map)
+                            .bindPopup('<b>'+p.title+'</b><br/>📍 '+p.location+(p.client?'<br/>Client: '+p.client:'')+'<br/>Status: '+p.status+'<br/>Budget: ₹'+Number(p.budget).toLocaleString());
+                        } catch(e){}
+                      };
+                      projects.forEach(p => geocodeAndPin(p));
+
+                      // Draw User Live Trail
+                      const trailPoints = ${JSON.stringify(gpsTrail.map(t => [t.lat, t.lng]))};
+                      if (trailPoints.length > 1) {
+                        L.polyline(trailPoints, { color: '#3b82f6', weight: 4, opacity: 0.85, smoothFactor: 1 }).addTo(map);
+                      }
+
+                      // User Live Pulse Marker
+                      ${gpsCoords ? `
+                        const userIcon = L.divIcon({
+                          className: '',
+                          html: '<div style="position:relative;width:20px;height:20px;"><div class="pulse-ring"></div><div style="width:16px;height:16px;border-radius:50%;background:#3b82f6;border:3px solid white;box-shadow:0 0 10px #3b82f6;position:absolute;top:2px;left:2px;"></div></div>',
+                          iconSize: [20, 20],
+                          iconAnchor: [10, 10]
+                        });
+                        L.marker([${gpsCoords.latitude}, ${gpsCoords.longitude}], { icon: userIcon }).addTo(map)
+                          .bindPopup('<b>📍 Your Live Location</b><br/>Speed: ${(gpsCoords.speed ? gpsCoords.speed * 3.6 : 0).toFixed(1)} km/h<br/>Accuracy: ±${Math.round(gpsCoords.accuracy || 0)}m').openPopup();
+                        
+                        L.circle([${gpsCoords.latitude}, ${gpsCoords.longitude}], {
+                          radius: ${Math.min(150, gpsCoords.accuracy || 20)},
+                          color: '#3b82f6',
+                          fillColor: '#3b82f6',
+                          fillOpacity: 0.12,
+                          weight: 1
+                        }).addTo(map);
+                      ` : ''}
+
+                      // Field Worker Markers
+                      const workers = ${JSON.stringify(liveWorkers.map(w => ({ id: w.user_id, name: w.user_name, role: w.user_role, lat: w.latitude, lng: w.longitude, project: w.project_title })))};
+                      workers.forEach(w => {
+                        const workerIcon = L.divIcon({
+                          className: '',
+                          html: '<div style="width:14px;height:14px;border-radius:50%;background:#10b981;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.4);"></div>',
+                          iconSize: [14, 14],
+                          iconAnchor: [7, 7]
+                        });
+                        L.marker([w.lat, w.lng], { icon: workerIcon }).addTo(map)
+                          .bindPopup('<b>👤 ' + w.name + '</b> (' + (w.role || 'Worker') + ')' + (w.project ? '<br/>Project: ' + w.project : ''));
+                      });
+                    </script></body></html>`}
+                  />
+                </div>
+
+                {/* Project List below map */}
+                <div style={{ padding: "16px 20px", borderTop: `1px solid ${t.divider}`, display: "flex", flexWrap: "wrap", gap: "10px" }}>
+                  {projects.map(p => {
+                    const col = statusColor(p.status);
+                    return (
+                      <div key={p.id} onClick={() => { setActivePage("projects"); setSelectedProject(p); fetchProgress(p.id); setProjectTab("overview"); fetchTasks(p.id); }}
+                        style={{ display: "flex", alignItems: "center", gap: "8px", padding: "7px 14px", background: t.hover, borderRadius: "99px", border: `1px solid ${col}30`, cursor: "pointer", transition: "all 0.12s" }}
+                        onMouseEnter={e => e.currentTarget.style.background = col + "18"}
+                        onMouseLeave={e => e.currentTarget.style.background = t.hover}>
+                        <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: col, flexShrink: 0 }} />
+                        <span style={{ fontSize: "12px", fontWeight: "600", color: t.text }}>{p.title}</span>
+                        <span style={{ fontSize: "11px", color: t.muted }}>📍 {p.location}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           )}
 

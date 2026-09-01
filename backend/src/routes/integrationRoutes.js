@@ -219,7 +219,7 @@ router.post("/send-test", verifyToken, async (req, res) => {
 router.post("/notify/delay", verifyToken, async (req, res) => {
   try {
     const { sendGmailNotification, delayAlertEmail } = require("../utils/gmailService");
-    const { projectName, deadline, daysLate, notifyUserIds } = req.body;
+    const { projectName, deadline, daysLate, notifyUserIds, toEmail } = req.body;
 
     // Notify all specified users who have Google connected
     const targets = notifyUserIds || [req.user.id];
