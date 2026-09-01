@@ -4,9 +4,10 @@ import { useApp } from "../context.jsx";
 import { api, getApiBaseUrl, setApiBaseUrl } from "../api.js";
 
 const CANDIDATE_URLS = [
-  "http://192.168.1.71:5000/api",   // Wi-Fi IP
+  "http://192.168.1.71:5000/api",   // Wi-Fi LAN IP
   "http://192.168.137.73:5000/api", // Mobile Hotspot IP
   "https://buildcore-anay-live.loca.lt/api", // Cloud Tunnel
+  "http://10.0.2.2:5000/api",       // Android Emulator
 ];
 
 export default function LoginPage() {
@@ -22,7 +23,7 @@ export default function LoginPage() {
     if (!targetUrl) return false;
     const rootUrl = targetUrl.replace(/\/api\/?$/, "");
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 3000);
+    const timer = setTimeout(() => controller.abort(), 1800);
     try {
       const res = await fetch(rootUrl, {
         method: "GET",
@@ -47,35 +48,33 @@ export default function LoginPage() {
 
   async function checkPing() {
     setPingStatus("checking");
-    const current = getApiBaseUrl();
 
-    // 1. First test currently saved URL
-    let ok = await testUrl(current);
-    if (ok) {
-      setPingStatus("online");
-      setServerUrl(current);
-      return;
-    }
-
-    // 2. Automatically scan all candidate network URLs in parallel
-    const scanList = [
-      ...CANDIDATE_URLS.filter((u) => u !== current),
-      "http://localhost:5000/api",
-      "http://10.0.2.2:5000/api",
+    // Fast parallel probe across all candidates simultaneously
+    const candidates = [
+      getApiBaseUrl(),
+      "http://192.168.1.71:5000/api",
+      "http://192.168.137.73:5000/api",
+      "https://buildcore-anay-live.loca.lt/api",
     ];
 
-    for (const candUrl of scanList) {
-      const isAlive = await testUrl(candUrl);
-      if (isAlive) {
-        setApiBaseUrl(candUrl);
-        setServerUrl(candUrl);
-        setPingStatus("online");
-        showToast(`Auto-connected to backend at ${candUrl} 🟢`, "success", 2500);
-        return;
-      }
-    }
+    const uniqueCandidates = [...new Set(candidates.filter(Boolean))];
 
-    setPingStatus("offline");
+    try {
+      // Find whichever server responds first!
+      const fastest = await Promise.any(
+        uniqueCandidates.map(async (url) => {
+          const ok = await testUrl(url);
+          if (ok) return url;
+          throw new Error("unreachable");
+        })
+      );
+
+      setApiBaseUrl(fastest);
+      setServerUrl(fastest);
+      setPingStatus("online");
+    } catch {
+      setPingStatus("offline");
+    }
   }
 
   useEffect(() => {
@@ -84,14 +83,24 @@ export default function LoginPage() {
 
   async function submit(e) {
     e.preventDefault();
+    if (!form.password) {
+      showToast("Please enter your password", "error");
+      return;
+    }
+
     setLoading(true);
     try {
       const data = await api.post("/auth/login", form);
       doLogin(data.token, data.user);
+      showToast("Signed in successfully! 🚀", "success");
       nav("/", { replace: true });
     } catch (err) {
-      showToast(err.message || "Login failed — check server connection", "error");
-      checkPing();
+      const msg = err.message || "Login failed";
+      showToast(msg, "error");
+      // If it was a network error, trigger re-scan
+      if (msg.includes("reach") || msg.includes("network") || msg.includes("Failed to fetch")) {
+        checkPing();
+      }
     } finally {
       setLoading(false);
     }
@@ -101,7 +110,7 @@ export default function LoginPage() {
     const target = urlToSave || serverUrl;
     setApiBaseUrl(target);
     setServerUrl(target);
-    showToast("Server URL updated!", "success");
+    showToast(`Server URL set to ${target}`, "info");
     setShowConfig(false);
     checkPing();
   }
@@ -138,7 +147,7 @@ export default function LoginPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ width: 8, height: 8, borderRadius: "50%", background: pingStatus === "online" ? "#10b981" : pingStatus === "checking" ? "#f59e0b" : "#ef4444", boxShadow: pingStatus === "online" ? "0 0 8px #10b981" : "none" }} />
             <span style={{ fontSize: 12, color: pingStatus === "online" ? "#34d399" : pingStatus === "checking" ? "#fbbf24" : "#f87171", fontWeight: 600 }}>
-              {pingStatus === "online" ? "Backend Online 🟢" : pingStatus === "checking" ? "Scanning server..." : "Server Offline 🔴"}
+              {pingStatus === "online" ? "Backend Online 🟢" : pingStatus === "checking" ? "Connecting..." : "Server Offline 🔴"}
             </span>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
