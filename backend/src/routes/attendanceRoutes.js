@@ -30,6 +30,24 @@ const getUser = (req) => {
   } catch { return null; }
 };
 
+// GET /api/attendance — list all attendance records (with date/project filter)
+router.get("/", async (req, res) => {
+  if (!getUser(req)) return res.status(401).json({ message: "Unauthorized" });
+  try {
+    const { date, project_id } = req.query;
+    let q = `SELECT a.*, u.name as user_name, u.name, u.email, u.role, p.title as project_title 
+             FROM attendance a 
+             JOIN users u ON a.user_id = u.id 
+             LEFT JOIN projects p ON a.project_id = p.id WHERE 1=1`;
+    const params = [];
+    if (date) { params.push(date); q += ` AND a.date = $${params.length}`; }
+    if (project_id) { params.push(project_id); q += ` AND a.project_id = $${params.length}`; }
+    q += ` ORDER BY a.date DESC, a.clock_in DESC NULLS LAST, u.name`;
+    const r = await pool.query(q, params);
+    res.json(r.rows);
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
 router.get("/:projectId", async (req, res) => {
   if (!getUser(req)) return res.status(401).json({ message: "Unauthorized" });
   try {
@@ -45,9 +63,12 @@ router.get("/:projectId", async (req, res) => {
 });
 
 router.post("/clock-in", async (req, res) => {
-  if (!getUser(req)) return res.status(401).json({ message: "Unauthorized" });
+  const authUser = getUser(req);
+  if (!authUser) return res.status(401).json({ message: "Unauthorized" });
   try {
     const { project_id, user_id } = req.body;
+    const targetUserId = Number(user_id || authUser.id);
+    const targetProjectId = Number(project_id);
     const now = new Date();
     const date = now.toISOString().split("T")[0];
     const h = now.getHours(), m = now.getMinutes();
@@ -59,17 +80,20 @@ router.post("/clock-in", async (req, res) => {
          SET clock_in = CASE WHEN attendance.clock_in IS NULL THEN $5 ELSE attendance.clock_in END,
              status   = CASE WHEN attendance.status IS NULL THEN $4 ELSE attendance.status END
        RETURNING *`,
-      [project_id, user_id, date, autoStatus, now]
+      [targetProjectId, targetUserId, date, autoStatus, now]
     );
-    broadcast("attendance_update", { action: "clock-in", project_id, user_id, status: autoStatus });
+    broadcast("attendance_update", { action: "clock-in", project_id: targetProjectId, user_id: targetUserId, status: autoStatus });
     res.json(r.rows[0]);
   } catch (e) { res.status(500).json({ message: e.message }); }
 });
 
 router.post("/clock-out", async (req, res) => {
-  if (!getUser(req)) return res.status(401).json({ message: "Unauthorized" });
+  const authUser = getUser(req);
+  if (!authUser) return res.status(401).json({ message: "Unauthorized" });
   try {
     const { project_id, user_id } = req.body;
+    const targetUserId = Number(user_id || authUser.id);
+    const targetProjectId = Number(project_id);
     const now = new Date();
     const date = now.toISOString().split("T")[0];
     const r = await pool.query(
@@ -77,9 +101,9 @@ router.post("/clock-out", async (req, res) => {
        VALUES ($1,$2,$3,$4)
        ON CONFLICT (project_id, user_id, date) DO UPDATE SET clock_out = $4
        RETURNING *`,
-      [project_id, user_id, date, now]
+      [targetProjectId, targetUserId, date, now]
     );
-    broadcast("attendance_update", { action: "clock-out", project_id, user_id });
+    broadcast("attendance_update", { action: "clock-out", project_id: targetProjectId, user_id: targetUserId });
     res.json(r.rows[0]);
   } catch (e) { res.status(500).json({ message: e.message }); }
 });

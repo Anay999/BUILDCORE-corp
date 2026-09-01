@@ -279,22 +279,25 @@ export default function GpsTrackerPage() {
         const eta = new Date(Date.now() + remainingSec * 1000);
         setEtaTime(eta.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
 
-        // 🎯 500-METER GEOFENCE ARRIVAL CHECK
+        // 🎯 500-METER GEOFENCE ARRIVAL CHECK (Navigation Mode)
         if (dToDest <= 500 && !hasMarkedArrival) {
           setHasMarkedArrival(true);
           setShowArrivalBanner(true);
 
-          if (destination.projectId) {
+          const activeUid = user?.id || getUser()?.id || 1;
+          const targetProjId = destination.projectId || selectedProjectId;
+
+          if (targetProjId) {
             api
               .post("/attendance/clock-in", {
-                project_id: destination.projectId,
-                user_id: user?.id,
+                project_id: Number(targetProjId),
+                user_id: Number(activeUid),
               })
               .then(() => {
-                showToast(`🎉 Arrived within 500m of ${destination.title}! Attendance Marked Present ✅`, "success", 4000);
+                showToast(`🎉 Arrived within 500m of ${destination.title}! Geo-Attendance Marked Present ✅`, "success", 4500);
               })
               .catch(() => {
-                showToast(`🎉 Arrived within 500m of ${destination.title}!`, "success", 3000);
+                showToast(`🎉 Arrived within 500m of ${destination.title}!`, "success", 3500);
               });
           }
         }
@@ -307,6 +310,29 @@ export default function GpsTrackerPage() {
             if (dToStep < 35) {
               setCurrentStepIdx((idx) => Math.min(idx + 1, routeSteps.length - 1));
             }
+          }
+        }
+      }
+
+      // 🎯 500-METER GEOFENCE ARRIVAL CHECK (Standard Live Tracking Mode)
+      if (!navModeRef.current && selectedProjectId && !hasMarkedArrival) {
+        const selProj = projects.find((p) => String(p.id) === String(selectedProjectId));
+        if (selProj) {
+          const pCoords = resolveProjectCoords(selProj);
+          const dToProj = calculateDistance(latitude, longitude, pCoords.lat, pCoords.lng);
+          if (dToProj <= 500) {
+            setHasMarkedArrival(true);
+            setShowArrivalBanner(true);
+            const activeUid = user?.id || getUser()?.id || 1;
+            api
+              .post("/attendance/clock-in", {
+                project_id: Number(selectedProjectId),
+                user_id: Number(activeUid),
+              })
+              .then(() => {
+                showToast(`🎉 Within 500m of ${selProj.title}! Geo-Attendance Marked Present ✅`, "success", 4500);
+              })
+              .catch(() => {});
           }
         }
       }
