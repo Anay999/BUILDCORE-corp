@@ -1,9 +1,9 @@
 // BuildCore Ultra-Fast High-Reliability API Client
 const PRIMARY_LAN = "http://192.168.1.71:5000/api";
-const TUNNEL_URL = "https://buildcore-anay-live.loca.lt/api";
+const TUNNEL_URL = "https://stale-grasshopper-30.loca.lt/api";
 
 export function normalizeApiUrl(url) {
-  if (!url) return TUNNEL_URL;
+  if (!url) return PRIMARY_LAN;
   let clean = url.trim().replace(/\/+$/, "");
   if (clean.includes("loca.lt") && clean.startsWith("http://")) {
     clean = clean.replace("http://", "https://");
@@ -15,8 +15,9 @@ export function normalizeApiUrl(url) {
 }
 
 const CANDIDATE_URLS = [
-  TUNNEL_URL,
   PRIMARY_LAN,
+  "https://stale-grasshopper-30.loca.lt/api",
+  "https://buildcore-anay-live.loca.lt/api",
   "http://192.168.137.73:5000/api",
   "http://10.0.2.2:5000/api",
 ];
@@ -33,7 +34,7 @@ export function getApiBaseUrl() {
     cachedActiveUrl = normalizeApiUrl(custom);
     return cachedActiveUrl;
   }
-  return TUNNEL_URL;
+  return PRIMARY_LAN;
 }
 
 export function setApiBaseUrl(url) {

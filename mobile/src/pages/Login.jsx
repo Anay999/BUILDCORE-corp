@@ -181,12 +181,40 @@ export default function LoginPage() {
               type="text"
               value={serverUrl}
               onChange={(e) => setServerUrl(e.target.value)}
-              placeholder="https://buildcore-anay-live.loca.lt/api"
+              placeholder="http://192.168.1.71:5000/api"
               style={{ width: "100%", padding: "8px 10px", background: "#0f172a", border: "1px solid #475569", borderRadius: 6, color: "#fff", fontSize: 12, marginBottom: 8 }}
             />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 8 }}>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => {
+                  setServerUrl("http://192.168.1.71:5000/api");
+                  setApiBaseUrl("http://192.168.1.71:5000/api");
+                  showToast("Switched to Direct Wi-Fi (192.168.1.71)", "info");
+                  checkPing();
+                }}
+                style={{ padding: "5px 6px", fontSize: 10, fontWeight: 700 }}
+              >
+                📶 Direct Wi-Fi
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => {
+                  setServerUrl("https://stale-grasshopper-30.loca.lt/api");
+                  setApiBaseUrl("https://stale-grasshopper-30.loca.lt/api");
+                  showToast("Switched to Cloud Tunnel", "info");
+                  checkPing();
+                }}
+                style={{ padding: "5px 6px", fontSize: 10, fontWeight: 700 }}
+              >
+                🌐 Cloud Tunnel
+              </button>
+            </div>
             <div style={{ display: "flex", gap: 6 }}>
               <button type="button" className="btn btn-primary btn-sm" onClick={handleSaveServer} style={{ flex: 1, padding: "6px 8px", fontSize: 11 }}>
-                Save
+                Save URL
               </button>
               <button type="button" className="btn btn-secondary btn-sm" onClick={checkPing} style={{ padding: "6px 8px", fontSize: 11 }}>
                 Test Ping
