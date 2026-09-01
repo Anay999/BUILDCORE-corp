@@ -1,11 +1,13 @@
-// API helper — points to backend with smart auto-detection (Hotspot + Same WiFi + Cloud 5G)
+// API helper — points to backend with smart auto-detection (Same WiFi + Hotspot + Cloud 5G)
 const CANDIDATE_URLS = [
-  "http://192.168.137.73:5000/api", // Mobile Hotspot IP
   "http://192.168.1.71:5000/api",   // Wi-Fi LAN IP
+  "http://192.168.137.73:5000/api", // Mobile Hotspot IP
   "https://buildcore-anay-live.loca.lt/api", // Cloud Tunnel
+  "http://10.0.2.2:5000/api",       // Android Emulator Loopback
+  "http://localhost:5000/api",      // Local Web Loopback
 ];
 
-const DEFAULT_LOCAL_URL = "http://192.168.137.73:5000/api";
+const DEFAULT_LOCAL_URL = "http://192.168.1.71:5000/api";
 const DEFAULT_TUNNEL_URL = "https://buildcore-anay-live.loca.lt/api";
 
 export function getApiBaseUrl() {
@@ -35,11 +37,11 @@ function headers(extra = {}) {
   };
 }
 
-async function tryFetch(base, path, opts = {}) {
+async function tryFetch(base, path, opts = {}, timeoutMs = 3000) {
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
   const url = path.startsWith("http") ? path : `${base}${cleanPath}`;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 4000);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   const mergedHeaders = {
     "Bypass-Tunnel-Reminder": "true",
@@ -69,21 +71,23 @@ async function req(method, path, body) {
 
   let res;
   try {
-    res = await tryFetch(primaryBase, path, opts);
+    res = await tryFetch(primaryBase, path, opts, 3500);
   } catch {
-    // Auto-discover which candidate URL is currently online
+    // Fast parallel probe across all candidates
     let found = false;
-    for (const altUrl of CANDIDATE_URLS) {
-      if (altUrl === primaryBase) continue;
+    const candidates = CANDIDATE_URLS.filter((u) => u !== primaryBase);
+
+    for (const altUrl of candidates) {
       try {
-        res = await tryFetch(altUrl, path, opts);
+        res = await tryFetch(altUrl, path, opts, 2500);
         setApiBaseUrl(altUrl);
         found = true;
         break;
       } catch {}
     }
+
     if (!found) {
-      throw new Error("Unable to reach backend. Ensure laptop server is running.");
+      throw new Error("Unable to reach backend. Tap '📶 Wi-Fi (1.71)' or check laptop server.");
     }
   }
 
@@ -123,12 +127,12 @@ export const api = {
     const primaryBase = getApiBaseUrl();
     let res;
     try {
-      res = await tryFetch(primaryBase, path, opts);
+      res = await tryFetch(primaryBase, path, opts, 6000);
     } catch {
       for (const altUrl of CANDIDATE_URLS) {
         if (altUrl === primaryBase) continue;
         try {
-          res = await tryFetch(altUrl, path, opts);
+          res = await tryFetch(altUrl, path, opts, 4000);
           setApiBaseUrl(altUrl);
           break;
         } catch {}
