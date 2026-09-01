@@ -57,6 +57,8 @@ router.post("/", async (req, res) => {
     const shouldRaise  = overall_status === "fail" || overall_status === "failed" || failedItems.length > 0;
     let issue_auto_created = false;
 
+const eventsRouter = require("./eventsRoutes");
+
     if (shouldRaise && project_id) {
       try {
         const failSummary = failedItems.length > 0
@@ -64,11 +66,12 @@ router.post("/", async (req, res) => {
           : "General inspection failure";
         const issueTitle = `Safety Inspection Failed — ${new Date().toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"})}`;
         const issueDesc  = `Auto-raised from safety inspection #${inspection.id}.\n\nFailed checks: ${failSummary}${notes ? "\n\nInspector notes: " + notes : ""}`;
-        await pool.query(`
+        const issRes = await pool.query(`
           INSERT INTO issues (project_id, reported_by, type, priority, title, description, status)
-          VALUES ($1, $2, 'Safety', 'high', $3, $4, 'open')
+          VALUES ($1, $2, 'Safety', 'high', $3, $4, 'open') RETURNING *
         `, [project_id, inspector_id || u.id, issueTitle, issueDesc]);
         issue_auto_created = true;
+        eventsRouter.broadcast("issue_update", { action: "create", issue: issRes.rows[0] });
       } catch (issErr) {
         console.log("safety→issue auto-create:", issErr.message);
       }
@@ -87,6 +90,7 @@ router.post("/", async (req, res) => {
     }
     // ─────────────────────────────────────────────────────────────────────────
 
+    eventsRouter.broadcast("safety_alert", { inspection, project_id, status: overall_status });
     res.json({ ...inspection, issue_auto_created });
   } catch (e) { console.log(e.message); res.status(500).json({ message: "Server error" }); }
 });

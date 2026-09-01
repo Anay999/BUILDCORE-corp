@@ -70,19 +70,24 @@ router.get("/:projectId", async (req, res) => {
   } catch (e) { console.log(e.message); res.status(500).json({ message: "Server error" }); }
 });
 
+const eventsRouter = require("./eventsRoutes");
+
 // POST /api/issues
 router.post("/", async (req, res) => {
   const user = getUser(req);
   if (!user) return res.status(401).json({ message: "Unauthorized" });
   try {
-    const { project_id, type, priority, title, description, photo_url } = req.body;
+    const { project_id, type, category, priority, title, description, photo_url } = req.body;
     if (!project_id || !title) return res.status(400).json({ message: "project_id and title required" });
+    const issueType = type || category || "General";
     const r = await pool.query(
       `INSERT INTO issues (project_id, reported_by, type, priority, title, description, photo_url)
        VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-      [project_id, user.id, type || "General", priority || "medium", title, description || null, photo_url || null]
+      [project_id, user.id, issueType, priority || "medium", title, description || null, photo_url || null]
     );
-    res.json(r.rows[0]);
+    const createdIssue = r.rows[0];
+    eventsRouter.broadcast("issue_update", { action: "create", issue: createdIssue });
+    res.json(createdIssue);
   } catch (e) { console.log(e.message); res.status(500).json({ message: "Server error" }); }
 });
 
